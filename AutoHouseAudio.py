@@ -54,17 +54,25 @@ def diarize_audio(audio_path, diarized_audio_path):
         import torch
         import speechbrain as sb
 
+        logging.info("Checking CUDA availability")
         if not torch.cuda.is_available():
             logging.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
             error_logger.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
             sys.exit(1)
+        logging.info("CUDA is available")
 
+        logging.info("Initializing pyannote Pipeline")
         HUGGING_FACE_TOKEN = "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"
         pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization@2.1", use_auth_token=HUGGING_FACE_TOKEN, device='cuda')
-        diarization = pipeline({"uri": "filename", "audio": audio_path})
+        logging.info("Pipeline initialized")
 
-        # Load the speechbrain model with CUDA
+        logging.info("Starting diarization process")
+        diarization = pipeline({"uri": "filename", "audio": audio_path})
+        logging.info("Diarization process completed")
+
+        logging.info("Loading SpeechBrain model")
         spkrec = sb.pretrained.interfaces.SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="tmp_dir", run_opts={"device":"cuda"})
+        logging.info("SpeechBrain model loaded")
 
         with open("diarization.txt", "w") as f:
             for turn, _, speaker in diarization.itertracks(yield_label=True):
