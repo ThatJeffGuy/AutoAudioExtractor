@@ -10,6 +10,30 @@ from tkinter import filedialog, messagebox
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Create and activate virtual environment
+venv_dir = os.path.join(tempfile.gettempdir(), "venv")
+if not os.path.exists(venv_dir):
+    logging.info("Creating virtual environment...")
+    subprocess.check_call([sys.executable, "-m", "venv", venv_dir])
+
+# Determine the activation script based on the OS
+if os.name == 'nt':
+    activate_script = os.path.join(venv_dir, "Scripts", "activate.bat")
+    pip_executable = os.path.join(venv_dir, "Scripts", "pip.exe")
+    python_executable = os.path.join(venv_dir, "Scripts", "python.exe")
+else:
+    activate_script = os.path.join(venv_dir, "bin", "activate")
+    pip_executable = os.path.join(venv_dir, "bin", "pip")
+    python_executable = os.path.join(venv_dir, "bin", "python")
+
+# Function to run a command in the virtual environment
+def run_in_venv(command):
+    if os.name == 'nt':
+        command = f'{activate_script} && {command}'
+    else:
+        command = f'source {activate_script} && {command}'
+    subprocess.check_call(command, shell=True)
+
 # Check if requirements.txt exists
 if not os.path.exists('requirements.txt'):
     logging.error("requirements.txt file not found. Exiting...")
@@ -19,9 +43,9 @@ if not os.path.exists('requirements.txt'):
 def install_packages():
     try:
         logging.info("Upgrading pip...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
+        subprocess.check_call([python_executable, "-m", "pip", "install", "--upgrade", "pip"])
         logging.info("Installing packages from requirements.txt...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
+        subprocess.check_call([pip_executable, "install", "-r", "requirements.txt"])
         logging.info("Packages installed successfully from requirements.txt")
     except subprocess.CalledProcessError as e:
         logging.error(f"Error installing packages: {e}")
@@ -33,7 +57,7 @@ def install_packages():
                     if package:
                         try:
                             logging.info(f"Installing {package}...")
-                            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+                            subprocess.check_call([pip_executable, "install", package])
                         except subprocess.CalledProcessError as e:
                             logging.error(f"Error installing {package}: {e}")
             logging.info("Individual package installation completed successfully.")
@@ -45,11 +69,16 @@ def install_packages():
 install_packages()
 
 # Now import the installed packages
-import numpy as np
-from pyannote.audio import Pipeline, Model
-from pydub import AudioSegment
-import psutil
-import speechbrain as sb
+try:
+    run_in_venv(f"{pip_executable} install numpy pyannote.audio pydub psutil speechbrain")
+    import numpy as np
+    from pyannote.audio import Pipeline, Model
+    from pydub import AudioSegment
+    import psutil
+    import speechbrain as sb
+except ImportError as e:
+    logging.error(f"ImportError: {e}. Exiting...")
+    sys.exit(1)
 
 # Your Hugging Face API token
 HUGGING_FACE_TOKEN = "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"
