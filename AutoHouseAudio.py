@@ -18,12 +18,25 @@ if not os.path.exists('requirements.txt'):
 # Function to install necessary packages from requirements.txt
 def install_packages():
     try:
+        logging.info("Upgrading pip...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
         logging.info("Installing packages from requirements.txt...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
         logging.info("Packages installed successfully from requirements.txt")
     except subprocess.CalledProcessError as e:
         logging.error(f"Error installing packages: {e}")
-        sys.exit(1)
+        logging.info("Attempting to install packages individually...")
+        try:
+            with open('requirements.txt', 'r') as f:
+                for line in f:
+                    package = line.strip()
+                    if package:
+                        logging.info(f"Installing {package}...")
+                        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+            logging.info("Individual package installation completed successfully.")
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Error installing individual packages: {e}")
+            sys.exit(1)
 
 # Install packages
 install_packages()
