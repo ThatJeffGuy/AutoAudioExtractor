@@ -20,7 +20,7 @@ error_logger.addHandler(error_handler)
 
 # Ensure ffmpeg is in PATH or set FFMPEG_BINARY environment variable
 ffmpeg_path = shutil.which("ffmpeg")
-if (ffmpeg_path):
+if ffmpeg_path:
     logging.info(f"ffmpeg is installed at: {ffmpeg_path}")
     os.environ["FFMPEG_BINARY"] = ffmpeg_path
 else:
@@ -29,15 +29,16 @@ else:
     messagebox.showerror("Error", "ffmpeg is not installed or not in PATH. Please install ffmpeg and try again.")
     sys.exit(1)
 
-# Create and activate virtual environment
-venv_path = os.path.join(os.path.dirname(__file__), 'venv')
+# Determine virtual environment directory
+venv_root_dir = os.environ.get('VENV_DIR', os.path.join(os.path.expanduser("~"), 'venv'))
+venv_path = os.path.join(venv_root_dir, 'autohouse_audio_env')
 if not os.path.exists(venv_path):
     logging.info(f"Creating virtual environment at: {venv_path}")
     subprocess.check_call([sys.executable, '-m', 'venv', venv_path])
 else:
     logging.info(f"Virtual environment already exists at: {venv_path}")
 
-# Install pydub and pyannote.audio in the virtual environment
+# Install pydub and CUDA-based pyannote.audio in the virtual environment
 if os.name == 'nt':
     python_executable = os.path.join(venv_path, 'Scripts', 'python.exe')
 else:
@@ -45,7 +46,8 @@ else:
 
 try:
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pydub'])
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pyannote.audio'])
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch', 'torchaudio', 'torchvision'])
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pyannote.audio[cuda]'])
 except subprocess.CalledProcessError as e:
     logging.error(f"Failed to install packages: {e}")
     error_logger.error(f"Failed to install packages: {e}")
@@ -62,12 +64,19 @@ if sys.executable != python_executable:
 try:
     from pydub import AudioSegment
     from pyannote.audio import Pipeline
-    logging.info("pydub and pyannote.audio libraries loaded successfully in the virtual environment")
+    import torch
+    logging.info("pydub, pyannote.audio, and torch libraries loaded successfully in the virtual environment")
 except ImportError as e:
-    logging.error(f"Error importing pydub or pyannote.audio: {e}")
-    error_logger.error(f"Error importing pydub or pyannote.audio: {e}")
-    messagebox.showerror("Error", f"Error importing pydub or pyannote.audio: {e}. Please ensure they are installed.")
+    logging.error(f"Error importing pydub, pyannote.audio, or torch: {e}")
+    error_logger.error(f"Error importing pydub, pyannote.audio, or torch: {e}")
+    messagebox.showerror("Error", f"Error importing pydub, pyannote.audio, or torch: {e}. Please ensure they are installed.")
     sys.exit(1)
+
+# Check CUDA availability
+logging.info(f"PyTorch CUDA is available: {torch.cuda.is_available()}")
+logging.info(f"PyTorch CUDA device count: {torch.cuda.device_count()}")
+logging.info(f"PyTorch CUDA current device: {torch.cuda.current_device()}")
+logging.info(f"PyTorch CUDA device name: {torch.cuda.get_device_name(torch.cuda.current_device())}")
 
 # Function to check the audio streams in the video file using ffmpeg
 def check_audio_streams(video_path):
@@ -244,6 +253,27 @@ def main():
 
     root.destroy()
     logging.info("Main function completed")
+
+    # Clean up: delete the virtual environment and other temporary files
+    try:
+        if os.path.exists(venv_path):
+            shutil.rmtree(venv_path)
+            logging.info(f"Deleted virtual environment at: {venv_path}")
+        else:
+            logging.info(f"No virtual environment found at: {venv_path}")
+
+        # Optionally, delete any other temp files created
+        temp_files = ["diarization.txt", "segments_list.txt"]
+        for temp_file in temp_files:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+                logging.info(f"Deleted temporary file: {temp_file}")
+            else:
+                logging.info(f"No temporary file found: {temp_file}")
+
+    except Exception as e:
+        logging.error(f"Error during cleanup: {e}")
+        error_logger.error(f"Error during cleanup: {e}")
 
 if __name__ == "__main__":
     main()
