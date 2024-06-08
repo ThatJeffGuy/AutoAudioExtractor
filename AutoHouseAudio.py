@@ -20,7 +20,7 @@ error_logger.addHandler(error_handler)
 
 # Ensure ffmpeg is in PATH or set FFMPEG_BINARY environment variable
 ffmpeg_path = shutil.which("ffmpeg")
-if (ffmpeg_path):
+if ffmpeg_path:
     logging.info(f"ffmpeg is installed at: {ffmpeg_path}")
     os.environ["FFMPEG_BINARY"] = ffmpeg_path
 else:
@@ -47,7 +47,9 @@ else:
 try:
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pydub'])
     # Install CUDA version of torch explicitly for CUDA 11.7
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch==1.11.0+cu117', 'torchaudio==0.11.0+cu117', 'torchvision==0.12.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch==1.11.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchaudio==0.11.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchvision==0.12.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pyannote.audio[cuda]'])
 except subprocess.CalledProcessError as e:
     logging.error(f"Failed to install packages: {e}")
@@ -66,11 +68,12 @@ try:
     from pydub import AudioSegment
     from pyannote.audio import Pipeline
     import torch
-    logging.info("pydub, pyannote.audio, and torch libraries loaded successfully in the virtual environment")
+    import speechbrain as sb
+    logging.info("pydub, pyannote.audio, torch, and speechbrain libraries loaded successfully in the virtual environment")
 except ImportError as e:
-    logging.error(f"Error importing pydub, pyannote.audio, or torch: {e}")
-    error_logger.error(f"Error importing pydub, pyannote.audio, or torch: {e}")
-    messagebox.showerror("Error", f"Error importing pydub, pyannote.audio, or torch: {e}. Please ensure they are installed.")
+    logging.error(f"Error importing pydub, pyannote.audio, torch, or speechbrain: {e}")
+    error_logger.error(f"Error importing pydub, pyannote.audio, torch, or speechbrain: {e}")
+    messagebox.showerror("Error", f"Error importing pydub, pyannote.audio, torch, or speechbrain: {e}. Please ensure they are installed.")
     sys.exit(1)
 
 # Check CUDA availability
@@ -98,17 +101,9 @@ def extract_audio(video_path, audio_path):
         raise ValueError("No English audio streams found in the MKV file.")
     
     try:
-        from pydub import AudioSegment
-        logging.info("pydub library loaded successfully")
         audio = AudioSegment.from_file(video_path)
         audio.export(audio_path, format="wav")
         logging.info(f"Audio extraction completed: {audio_path}")
-    except ImportError as e:
-        logging.error(f"Error during audio extraction: {e}")
-        error_logger.error(f"Error during audio extraction: {e}")
-        logging.error(f"Current PYTHONPATH: {sys.path}")
-        messagebox.showerror("Error", f"Error during audio extraction: {e}. Please ensure 'pydub' is installed.")
-        sys.exit(1)
     except Exception as e:
         logging.error(f"Error during audio extraction: {e}")
         error_logger.error(f"Error during audio extraction: {e}")
@@ -119,12 +114,6 @@ def extract_audio(video_path, audio_path):
 def diarize_audio(audio_path, diarized_audio_path):
     logging.info(f"Starting speaker diarization for {audio_path}")
     try:
-        from pyannote.audio import Pipeline
-        import torch
-        import speechbrain as sb
-
-        logging.info("pyannote.audio, torch, and speechbrain libraries loaded successfully")
-
         logging.info("Checking CUDA availability")
         if not torch.cuda.is_available():
             logging.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
