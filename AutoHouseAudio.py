@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import sys
@@ -8,19 +9,30 @@ from tkinter import filedialog, messagebox
 from pydub import AudioSegment
 from pyannote.audio import Pipeline, Model
 
+# Set up logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
 # Your Hugging Face API token
 HUGGING_FACE_TOKEN = "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"
 
 # Load the segmentation model
-model = Model.from_pretrained("pyannote/segmentation", use_auth_token=HUGGING_FACE_TOKEN)
+try:
+    logging.debug("Loading segmentation model...")
+    model = Model.from_pretrained("pyannote/segmentation", use_auth_token=HUGGING_FACE_TOKEN)
+    logging.info("Model loaded successfully")
+except Exception as e:
+    logging.error(f"Error loading model: {e}")
+    sys.exit(1)
 
 # Function to install necessary packages
 def install(package):
     try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-        print(f"Installed {package}")
+        logging.debug(f"Installing package: {package}")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+        logging.info(f"Installed {package}")
     except subprocess.CalledProcessError as e:
-        print(f"Error installing {package}: {e}")
+        logging.error(f"Error installing {package}: {e}")
+        sys.exit(1)
 
 # Check and install dependencies
 def check_and_install_dependencies():
@@ -47,13 +59,29 @@ def check_and_install_dependencies():
 # Install SpeechBrain separately due to specific requirements
 def install_speechbrain():
     try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "speechbrain"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-        print("Installed speechbrain")
+        logging.debug("Installing speechbrain...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "speechbrain"])
+        logging.info("Installed speechbrain")
     except subprocess.CalledProcessError as e:
-        print(f"Error installing speechbrain: {e}")
+        logging.error(f"Error installing speechbrain: {e}")
+        sys.exit(1)
 
-check_and_install_dependencies()
-install_speechbrain()
+# Check installation
+def check_installation():
+    check_and_install_dependencies()
+    try:
+        import speechbrain
+        logging.info("speechbrain is installed")
+    except ImportError:
+        install_speechbrain()
+        try:
+            import speechbrain
+            logging.info("speechbrain has been installed successfully")
+        except ImportError:
+            logging.error("Failed to install speechbrain")
+            sys.exit(1)
+
+check_installation()
 
 import psutil
 import speechbrain as sb
@@ -67,7 +95,7 @@ def check_audio_streams(video_path):
 
 # Function to extract English audio from video using pydub
 def extract_audio(video_path, audio_path):
-    print("Extracting English audio from the video...")
+    logging.debug("Extracting English audio from the video...")
     audio_streams = check_audio_streams(video_path)
     
     if not audio_streams:
@@ -76,11 +104,11 @@ def extract_audio(video_path, audio_path):
     # Convert the audio to WAV format using pydub
     audio = AudioSegment.from_file(video_path)
     audio.export(audio_path, format="wav")
-    print("Audio extraction completed.")
+    logging.info("Audio extraction completed.")
 
 # Function to perform speaker diarization using pyannote.audio and speechbrain
 def diarize_audio(audio_path, diarized_audio_path):
-    print("Performing speaker diarization...")
+    logging.debug("Performing speaker diarization...")
     pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization@2.1", use_auth_token=HUGGING_FACE_TOKEN)
     diarization = pipeline({"uri": "filename", "audio": audio_path})
 
@@ -106,7 +134,7 @@ def diarize_audio(audio_path, diarized_audio_path):
 
     command = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'segments_list.txt', '-c', 'copy', diarized_audio_path]
     subprocess.call(command)
-    print("Speaker diarization completed.")
+    logging.info("Speaker diarization completed.")
 
 def prompt_for_diarization():
     prompt_root = tk.Toplevel()
@@ -126,20 +154,20 @@ root.attributes('-topmost', True)
 video_path = filedialog.askopenfilename(title="Select MKV File", filetypes=[("MKV files", "*.mkv")])
 root.attributes('-topmost', False)
 if not video_path:
-    print("No file selected. Exiting...")
+    logging.error("No file selected. Exiting...")
     sys.exit()
 
-print(f"Selected file: {video_path}")
+logging.info(f"Selected file: {video_path}")
 
 # Determine the best location for the temporary directory on a local device
 temp_dir_base = tempfile.gettempdir()
 
-print(f"Creating temporary directory in: {temp_dir_base}")
+logging.debug(f"Creating temporary directory in: {temp_dir_base}")
 
 # Create a temporary directory for processing
 with tempfile.TemporaryDirectory(dir=temp_dir_base) as temp_dir:
     temp_video_path = os.path.join(temp_dir, os.path.basename(video_path))
-    print(f"Copying video file to temporary directory: {temp_video_path}")
+    logging.debug(f"Copying video file to temporary directory: {temp_video_path}")
     shutil.copy(video_path, temp_video_path)
     
     audio_path = os.path.join(temp_dir, os.path.splitext(os.path.basename(video_path))[0] + ".wav")
@@ -148,6 +176,7 @@ with tempfile.TemporaryDirectory(dir=temp_dir_base) as temp_dir:
     try:
         extract_audio(temp_video_path, audio_path)
     except ValueError as e:
+        logging.error(f"Error extracting audio: {e}")
         messagebox.showerror("Error", str(e))
         sys.exit()
 
@@ -156,6 +185,7 @@ with tempfile.TemporaryDirectory(dir=temp_dir_base) as temp_dir:
             diarize_audio(audio_path, diarized_audio_path)
             messagebox.showinfo("Success", f"Diarized audio saved as {diarized_audio_path}")
         except Exception as e:
+            logging.error(f"Diarization error: {e}")
             messagebox.showerror("Diarization Error", str(e))
             sys.exit()
     else:
@@ -164,8 +194,8 @@ with tempfile.TemporaryDirectory(dir=temp_dir_base) as temp_dir:
 # Ensure all temporary files are deleted
 try:
     shutil.rmtree(temp_dir)
-    print("Temporary files deleted.")
+    logging.info("Temporary files deleted.")
 except OSError as e:
-    print(f"Error deleting temporary files: {e}")
+    logging.error(f"Error deleting temporary files: {e}")
 
 root.destroy()
