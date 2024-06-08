@@ -43,12 +43,12 @@ if os.name == 'nt':
     python_executable = os.path.join(venv_path, 'Scripts', 'python')
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchaudio==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchvision==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchvision==0.15.2+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
 else:
     python_executable = os.path.join(venv_path, 'bin', 'python')
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchaudio==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchvision==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchvision==0.15.2+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
 
 try:
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pydub'])
