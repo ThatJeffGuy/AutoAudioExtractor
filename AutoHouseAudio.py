@@ -19,7 +19,15 @@ error_handler.setFormatter(error_formatter)
 error_logger.addHandler(error_handler)
 
 # Ensure ffmpeg is in PATH or set FFMPEG_BINARY environment variable
-os.environ["FFMPEG_BINARY"] = "ffmpeg"  # Adjust this if ffmpeg is not in your PATH
+ffmpeg_path = shutil.which("ffmpeg")
+if ffmpeg_path:
+    logging.info(f"ffmpeg is installed at: {ffmpeg_path}")
+    os.environ["FFMPEG_BINARY"] = ffmpeg_path
+else:
+    logging.error("ffmpeg is not installed or not in PATH")
+    error_logger.error("ffmpeg is not installed or not in PATH")
+    messagebox.showerror("Error", "ffmpeg is not installed or not in PATH. Please install ffmpeg and try again.")
+    sys.exit(1)
 
 # Function to check the audio streams in the video file using ffmpeg
 def check_audio_streams(video_path):
@@ -35,15 +43,19 @@ def extract_audio(video_path, audio_path):
     logging.info(f"Extracting English audio from {video_path}")
     audio_streams = check_audio_streams(video_path)
     if not audio_streams:
+        logging.error("No English audio streams found in the MKV file.")
+        error_logger.error("No English audio streams found in the MKV file.")
         raise ValueError("No English audio streams found in the MKV file.")
     try:
         from pydub import AudioSegment
+        logging.info("pydub library loaded successfully")
         audio = AudioSegment.from_file(video_path)
         audio.export(audio_path, format="wav")
         logging.info(f"Audio extraction completed: {audio_path}")
     except Exception as e:
         logging.error(f"Error during audio extraction: {e}")
         error_logger.error(f"Error during audio extraction: {e}")
+        messagebox.showerror("Error", f"Error during audio extraction: {e}")
         sys.exit(1)
 
 # Function to perform speaker diarization using pyannote.audio and speechbrain
@@ -54,10 +66,13 @@ def diarize_audio(audio_path, diarized_audio_path):
         import torch
         import speechbrain as sb
 
+        logging.info("pyannote.audio, torch, and speechbrain libraries loaded successfully")
+
         logging.info("Checking CUDA availability")
         if not torch.cuda.is_available():
             logging.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
             error_logger.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
+            messagebox.showerror("Error", "CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
             sys.exit(1)
         logging.info("CUDA is available")
 
@@ -104,13 +119,15 @@ def diarize_audio(audio_path, diarized_audio_path):
         if result.returncode != 0:
             logging.error(f"Error in merging segments: {result.stderr}")
             error_logger.error(f"Error in merging segments: {result.stderr}")
+            messagebox.showerror("Error", "Error in merging segments to create the final diarized audio file.")
             raise RuntimeError("Error in merging segments to create the final diarized audio file.")
         else:
             logging.info("Speaker diarization completed successfully.")
     except Exception as e:
         logging.error(f"Error in speaker diarization: {e}")
         error_logger.error(f"Error in speaker diarization: {e}")
-        raise
+        messagebox.showerror("Error", f"Error in speaker diarization: {e}")
+        sys.exit(1)
 
 def prompt_for_diarization():
     logging.info("Prompting user for diarization confirmation")
@@ -135,6 +152,7 @@ def main():
     if not video_path:
         logging.error("No file selected. Exiting...")
         error_logger.error("No file selected. Exiting...")
+        messagebox.showerror("Error", "No file selected. Exiting...")
         sys.exit()
 
     logging.info(f"Selected file: {video_path}")
