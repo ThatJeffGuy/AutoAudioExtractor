@@ -10,11 +10,20 @@ from tkinter import filedialog, messagebox
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Define a custom logger to also log errors to a file
+error_logger = logging.getLogger('error_logger')
+error_handler = logging.FileHandler('error-log.txt')
+error_handler.setLevel(logging.ERROR)
+error_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+error_handler.setFormatter(error_formatter)
+error_logger.addHandler(error_handler)
+
 # Ensure ffmpeg is in PATH or set FFMPEG_BINARY environment variable
 os.environ["FFMPEG_BINARY"] = "ffmpeg"  # Adjust this if ffmpeg is not in your PATH
 
 # Function to check the audio streams in the video file using ffmpeg
 def check_audio_streams(video_path):
+    logging.info(f"Checking audio streams for {video_path}")
     result = subprocess.run(['ffmpeg', '-i', video_path], stderr=subprocess.PIPE, text=True, encoding='utf-8', errors='replace')
     stream_info = result.stderr
     audio_streams = [line for line in stream_info.split('\n') if 'Audio' in line and 'eng' in line]
@@ -22,7 +31,7 @@ def check_audio_streams(video_path):
 
 # Function to extract English audio from video using pydub
 def extract_audio(video_path, audio_path):
-    logging.info("Extracting English audio from the video...")
+    logging.info(f"Extracting English audio from {video_path}")
     audio_streams = check_audio_streams(video_path)
     if not audio_streams:
         raise ValueError("No English audio streams found in the MKV file.")
@@ -30,20 +39,22 @@ def extract_audio(video_path, audio_path):
         from pydub import AudioSegment
         audio = AudioSegment.from_file(video_path)
         audio.export(audio_path, format="wav")
-        logging.info("Audio extraction completed.")
+        logging.info(f"Audio extraction completed: {audio_path}")
     except Exception as e:
         logging.error(f"Error during audio extraction: {e}")
+        error_logger.error(f"Error during audio extraction: {e}")
         sys.exit(1)
 
 # Function to perform speaker diarization using pyannote.audio and speechbrain
 def diarize_audio(audio_path, diarized_audio_path):
-    logging.info("Performing speaker diarization...")
+    logging.info(f"Starting speaker diarization for {audio_path}")
     from pyannote.audio import Pipeline
     import torch
     import speechbrain as sb
 
     if not torch.cuda.is_available():
         logging.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
+        error_logger.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
         sys.exit(1)
 
     HUGGING_FACE_TOKEN = "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"
@@ -61,9 +72,13 @@ def diarize_audio(audio_path, diarized_audio_path):
     for turn, _, speaker in diarization.itertracks(yield_label=True):
         segment_path = f"segment_{speaker}_{int(turn.start)}.wav"
         command = ['ffmpeg', '-i', audio_path, '-ss', str(turn.start), '-to', str(turn.end), '-c', 'copy', segment_path]
-        subprocess.call(command)
+        result = subprocess.run(command, stderr=subprocess.PIPE, text=True)
+        if result.returncode != 0:
+            logging.error(f"Error creating segment: {segment_path}, Error: {result.stderr}")
+            error_logger.error(f"Error creating segment: {segment_path}, Error: {result.stderr}")
+        else:
+            logging.info(f"Created segment: {segment_path}")
         segments.append(segment_path)
-        logging.info(f"Created segment: {segment_path}")
 
     with open("segments_list.txt", "w") as f:
         for segment in segments:
@@ -71,11 +86,13 @@ def diarize_audio(audio_path, diarized_audio_path):
 
     logging.info("Merging segments into final diarized audio file...")
     command = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'segments_list.txt', '-c', 'copy', diarized_audio_path]
-    result = subprocess.call(command)
-    if result == 0:
-        logging.info("Speaker diarization completed successfully.")
+    result = subprocess.run(command, stderr=subprocess.PIPE, text=True)
+    if result.returncode != 0:
+        logging.error(f"Error in merging segments: {result.stderr}")
+        error_logger.error(f"Error in merging segments: {result.stderr}")
+        raise RuntimeError("Error in merging segments to create the final diarized audio file.")
     else:
-        logging.error("Error in merging segments to create the final diarized audio file.")
+        logging.info("Speaker diarization completed successfully.")
 
 def prompt_for_diarization():
     prompt_root = tk.Toplevel()
@@ -96,6 +113,7 @@ def main():
     root.attributes('-topmost', False)
     if not video_path:
         logging.error("No file selected. Exiting...")
+        error_logger.error("No file selected. Exiting...")
         sys.exit()
 
     logging.info(f"Selected file: {video_path}")
@@ -115,6 +133,7 @@ def main():
             extract_audio(temp_video_path, audio_path)
         except ValueError as e:
             logging.error(f"Error extracting audio: {e}")
+            error_logger.error(f"Error extracting audio: {e}")
             messagebox.showerror("Error", str(e))
             sys.exit(1)
 
@@ -124,6 +143,7 @@ def main():
                 messagebox.showinfo("Success", f"Diarized audio saved as {diarized_audio_path}")
             except Exception as e:
                 logging.error(f"Diarization error: {e}")
+                error_logger.error(f"Diarization error: {e}")
                 messagebox.showerror("Diarization Error", str(e))
                 sys.exit(1)
         else:
