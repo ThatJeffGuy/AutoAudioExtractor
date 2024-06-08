@@ -31,8 +31,11 @@ def install_packages():
                 for line in f:
                     package = line.strip()
                     if package:
-                        logging.info(f"Installing {package}...")
-                        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+                        try:
+                            logging.info(f"Installing {package}...")
+                            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+                        except subprocess.CalledProcessError as e:
+                            logging.error(f"Error installing {package}: {e}")
             logging.info("Individual package installation completed successfully.")
         except subprocess.CalledProcessError as e:
             logging.error(f"Error installing individual packages: {e}")
