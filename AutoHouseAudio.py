@@ -37,8 +37,13 @@ if not os.path.exists(venv_path):
 else:
     logging.info(f"Virtual environment already exists at: {venv_path}")
 
+# Determine the activation script path
+if os.name == 'nt':
+    activate_script = os.path.join(venv_path, 'Scripts', 'activate_this.py')
+else:
+    activate_script = os.path.join(venv_path, 'bin', 'activate_this.py')
+
 # Activate virtual environment
-activate_script = os.path.join(venv_path, 'Scripts', 'activate_this.py')
 with open(activate_script) as file_:
     exec(file_.read(), dict(__file__=activate_script))
 
