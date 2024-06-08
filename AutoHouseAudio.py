@@ -38,26 +38,49 @@ if not os.path.exists(venv_path):
 else:
     logging.info(f"Virtual environment already exists at: {venv_path}")
 
-# Install pydub and CUDA-based pyannote.audio in the virtual environment
 if os.name == 'nt':
     python_executable = os.path.join(venv_path, 'Scripts', 'python')
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch==2.0.1+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchaudio==2.0.1+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchvision==0.15.2+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
 else:
     python_executable = os.path.join(venv_path, 'bin', 'python')
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch==2.0.1+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchaudio==2.0.1+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchvision==0.15.2+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
 
-try:
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pydub'])
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pyannote.audio[cuda]'])
-except subprocess.CalledProcessError as e:
-    logging.error(f"Failed to install packages: {e}")
-    error_logger.error(f"Failed to install packages: {e}")
-    messagebox.showerror("Error", "Failed to install required packages in the virtual environment. Please check your installation.")
-    sys.exit(1)
+# Function to check if a package is installed
+def is_package_installed(package_name):
+    try:
+        subprocess.check_call([python_executable, '-m', 'pip', 'show', package_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+# Install packages if they are not already installed
+packages = [
+    ('torch', '2.0.1+cu117'),
+    ('torchaudio', '2.0.1+cu117'),
+    ('torchvision', '0.15.2+cu117'),
+    'pydub',
+    'pyannote.audio[cuda]'
+]
+
+for package in packages:
+    if isinstance(package, tuple):
+        package_name, package_version = package
+        if not is_package_installed(package_name):
+            try:
+                subprocess.check_call([python_executable, '-m', 'pip', 'install', f'{package_name}=={package_version}', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Failed to install {package_name}: {e}")
+                error_logger.error(f"Failed to install {package_name}: {e}")
+                messagebox.showerror("Error", f"Failed to install {package_name}. Please check your installation.")
+                sys.exit(1)
+    else:
+        package_name = package
+        if not is_package_installed(package_name):
+            try:
+                subprocess.check_call([python_executable, '-m', 'pip', 'install', package_name])
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Failed to install {package_name}: {e}")
+                error_logger.error(f"Failed to install {package_name}: {e}")
+                messagebox.showerror("Error", f"Failed to install {package_name}. Please check your installation.")
+                sys.exit(1)
 
 # Re-run the script in the context of the virtual environment
 if sys.executable != python_executable:
