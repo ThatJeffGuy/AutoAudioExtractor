@@ -20,7 +20,7 @@ error_logger.addHandler(error_handler)
 
 # Ensure ffmpeg is in PATH or set FFMPEG_BINARY environment variable
 ffmpeg_path = shutil.which("ffmpeg")
-if ffmpeg_path:
+if (ffmpeg_path):
     logging.info(f"ffmpeg is installed at: {ffmpeg_path}")
     os.environ["FFMPEG_BINARY"] = ffmpeg_path
 else:
@@ -37,25 +37,37 @@ if not os.path.exists(venv_path):
 else:
     logging.info(f"Virtual environment already exists at: {venv_path}")
 
-# Determine the activation script path
+# Install pydub and pyannote.audio in the virtual environment
 if os.name == 'nt':
-    activate_script = os.path.join(venv_path, 'Scripts', 'activate_this.py')
+    python_executable = os.path.join(venv_path, 'Scripts', 'python.exe')
 else:
-    activate_script = os.path.join(venv_path, 'bin', 'activate_this.py')
+    python_executable = os.path.join(venv_path, 'bin', 'python')
 
-# Activate virtual environment
-with open(activate_script) as file_:
-    exec(file_.read(), dict(__file__=activate_script))
-
-# Ensure pydub is installed in the virtual environment
 try:
-    import pydub
-    logging.info("pydub library loaded successfully in the virtual environment")
-except ImportError:
-    logging.info("pydub not found, installing it...")
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pydub'])
-    import pydub
-    logging.info("pydub library loaded successfully after installation")
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pydub'])
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pyannote.audio'])
+except subprocess.CalledProcessError as e:
+    logging.error(f"Failed to install packages: {e}")
+    error_logger.error(f"Failed to install packages: {e}")
+    messagebox.showerror("Error", "Failed to install required packages in the virtual environment. Please check your installation.")
+    sys.exit(1)
+
+# Re-run the script in the context of the virtual environment
+if sys.executable != python_executable:
+    logging.info(f"Re-running script with virtual environment: {python_executable}")
+    result = subprocess.run([python_executable] + sys.argv)
+    sys.exit(result.returncode)
+
+# At this point, the script is running in the virtual environment with pydub and pyannote.audio installed
+try:
+    from pydub import AudioSegment
+    from pyannote.audio import Pipeline
+    logging.info("pydub and pyannote.audio libraries loaded successfully in the virtual environment")
+except ImportError as e:
+    logging.error(f"Error importing pydub or pyannote.audio: {e}")
+    error_logger.error(f"Error importing pydub or pyannote.audio: {e}")
+    messagebox.showerror("Error", f"Error importing pydub or pyannote.audio: {e}. Please ensure they are installed.")
+    sys.exit(1)
 
 # Function to check the audio streams in the video file using ffmpeg
 def check_audio_streams(video_path):
