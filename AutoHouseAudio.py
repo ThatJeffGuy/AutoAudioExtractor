@@ -29,6 +29,29 @@ else:
     messagebox.showerror("Error", "ffmpeg is not installed or not in PATH. Please install ffmpeg and try again.")
     sys.exit(1)
 
+# Create and activate virtual environment
+venv_path = os.path.join(os.path.dirname(__file__), 'venv')
+if not os.path.exists(venv_path):
+    logging.info(f"Creating virtual environment at: {venv_path}")
+    subprocess.check_call([sys.executable, '-m', 'venv', venv_path])
+else:
+    logging.info(f"Virtual environment already exists at: {venv_path}")
+
+# Activate virtual environment
+activate_script = os.path.join(venv_path, 'Scripts', 'activate_this.py')
+with open(activate_script) as file_:
+    exec(file_.read(), dict(__file__=activate_script))
+
+# Ensure pydub is installed in the virtual environment
+try:
+    import pydub
+    logging.info("pydub library loaded successfully in the virtual environment")
+except ImportError:
+    logging.info("pydub not found, installing it...")
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pydub'])
+    import pydub
+    logging.info("pydub library loaded successfully after installation")
+
 # Function to check the audio streams in the video file using ffmpeg
 def check_audio_streams(video_path):
     logging.info(f"Checking audio streams for {video_path}")
@@ -46,12 +69,19 @@ def extract_audio(video_path, audio_path):
         logging.error("No English audio streams found in the MKV file.")
         error_logger.error("No English audio streams found in the MKV file.")
         raise ValueError("No English audio streams found in the MKV file.")
+    
     try:
         from pydub import AudioSegment
         logging.info("pydub library loaded successfully")
         audio = AudioSegment.from_file(video_path)
         audio.export(audio_path, format="wav")
         logging.info(f"Audio extraction completed: {audio_path}")
+    except ImportError as e:
+        logging.error(f"Error during audio extraction: {e}")
+        error_logger.error(f"Error during audio extraction: {e}")
+        logging.error(f"Current PYTHONPATH: {sys.path}")
+        messagebox.showerror("Error", f"Error during audio extraction: {e}. Please ensure 'pydub' is installed.")
+        sys.exit(1)
     except Exception as e:
         logging.error(f"Error during audio extraction: {e}")
         error_logger.error(f"Error during audio extraction: {e}")
@@ -123,6 +153,12 @@ def diarize_audio(audio_path, diarized_audio_path):
             raise RuntimeError("Error in merging segments to create the final diarized audio file.")
         else:
             logging.info("Speaker diarization completed successfully.")
+    except ImportError as e:
+        logging.error(f"Error during speaker diarization: {e}")
+        error_logger.error(f"Error during speaker diarization: {e}")
+        logging.error(f"Current PYTHONPATH: {sys.path}")
+        messagebox.showerror("Error", f"Error during speaker diarization: {e}. Please ensure all required packages are installed.")
+        sys.exit(1)
     except Exception as e:
         logging.error(f"Error in speaker diarization: {e}")
         error_logger.error(f"Error in speaker diarization: {e}")
