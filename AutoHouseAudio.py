@@ -49,55 +49,60 @@ def extract_audio(video_path, audio_path):
 # Function to perform speaker diarization using pyannote.audio and speechbrain
 def diarize_audio(audio_path, diarized_audio_path):
     logging.info(f"Starting speaker diarization for {audio_path}")
-    from pyannote.audio import Pipeline
-    import torch
-    import speechbrain as sb
+    try:
+        from pyannote.audio import Pipeline
+        import torch
+        import speechbrain as sb
 
-    if not torch.cuda.is_available():
-        logging.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
-        error_logger.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
-        sys.exit(1)
+        if not torch.cuda.is_available():
+            logging.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
+            error_logger.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
+            sys.exit(1)
 
-    HUGGING_FACE_TOKEN = "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"
-    pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization@2.1", use_auth_token=HUGGING_FACE_TOKEN, device='cuda')
-    diarization = pipeline({"uri": "filename", "audio": audio_path})
+        HUGGING_FACE_TOKEN = "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"
+        pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization@2.1", use_auth_token=HUGGING_FACE_TOKEN, device='cuda')
+        diarization = pipeline({"uri": "filename", "audio": audio_path})
 
-    # Load the speechbrain model with CUDA
-    spkrec = sb.pretrained.interfaces.SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="tmp_dir", run_opts={"device":"cuda"})
+        # Load the speechbrain model with CUDA
+        spkrec = sb.pretrained.interfaces.SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="tmp_dir", run_opts={"device":"cuda"})
 
-    with open("diarization.txt", "w") as f:
+        with open("diarization.txt", "w") as f:
+            for turn, _, speaker in diarization.itertracks(yield_label=True):
+                f.write(f"{turn.start:.1f} {turn.end:.1f} {speaker}\n")
+                logging.info(f"Diarization turn: {turn.start:.1f} {turn.end:.1f} {speaker}")
+
+        segments = []
         for turn, _, speaker in diarization.itertracks(yield_label=True):
-            f.write(f"{turn.start:.1f} {turn.end:.1f} {speaker}\n")
-            logging.info(f"Diarization turn: {turn.start:.1f} {turn.end:.1f} {speaker}")
+            segment_path = f"segment_{speaker}_{int(turn.start)}.wav"
+            command = ['ffmpeg', '-i', audio_path, '-ss', str(turn.start), '-to', str(turn.end), '-c', 'copy', segment_path]
+            logging.info(f"Running command: {' '.join(command)}")
+            result = subprocess.run(command, stderr=subprocess.PIPE, text=True)
+            if result.returncode != 0:
+                logging.error(f"Error creating segment: {segment_path}, Error: {result.stderr}")
+                error_logger.error(f"Error creating segment: {segment_path}, Error: {result.stderr}")
+            else:
+                logging.info(f"Created segment: {segment_path}")
+            segments.append(segment_path)
 
-    segments = []
-    for turn, _, speaker in diarization.itertracks(yield_label=True):
-        segment_path = f"segment_{speaker}_{int(turn.start)}.wav"
-        command = ['ffmpeg', '-i', audio_path, '-ss', str(turn.start), '-to', str(turn.end), '-c', 'copy', segment_path]
+        with open("segments_list.txt", "w") as f:
+            for segment in segments:
+                f.write(f"file '{os.path.abspath(segment)}'\n")
+                logging.info(f"Segment added to list: {segment}")
+
+        logging.info("Merging segments into final diarized audio file...")
+        command = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'segments_list.txt', '-c', 'copy', diarized_audio_path]
         logging.info(f"Running command: {' '.join(command)}")
         result = subprocess.run(command, stderr=subprocess.PIPE, text=True)
         if result.returncode != 0:
-            logging.error(f"Error creating segment: {segment_path}, Error: {result.stderr}")
-            error_logger.error(f"Error creating segment: {segment_path}, Error: {result.stderr}")
+            logging.error(f"Error in merging segments: {result.stderr}")
+            error_logger.error(f"Error in merging segments: {result.stderr}")
+            raise RuntimeError("Error in merging segments to create the final diarized audio file.")
         else:
-            logging.info(f"Created segment: {segment_path}")
-        segments.append(segment_path)
-
-    with open("segments_list.txt", "w") as f:
-        for segment in segments:
-            f.write(f"file '{os.path.abspath(segment)}'\n")
-            logging.info(f"Segment added to list: {segment}")
-
-    logging.info("Merging segments into final diarized audio file...")
-    command = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'segments_list.txt', '-c', 'copy', diarized_audio_path]
-    logging.info(f"Running command: {' '.join(command)}")
-    result = subprocess.run(command, stderr=subprocess.PIPE, text=True)
-    if result.returncode != 0:
-        logging.error(f"Error in merging segments: {result.stderr}")
-        error_logger.error(f"Error in merging segments: {result.stderr}")
-        raise RuntimeError("Error in merging segments to create the final diarized audio file.")
-    else:
-        logging.info("Speaker diarization completed successfully.")
+            logging.info("Speaker diarization completed successfully.")
+    except Exception as e:
+        logging.error(f"Error in speaker diarization: {e}")
+        error_logger.error(f"Error in speaker diarization: {e}")
+        raise
 
 def prompt_for_diarization():
     logging.info("Prompting user for diarization confirmation")
