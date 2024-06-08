@@ -20,7 +20,7 @@ error_logger.addHandler(error_handler)
 
 # Ensure ffmpeg is in PATH or set FFMPEG_BINARY environment variable
 ffmpeg_path = shutil.which("ffmpeg")
-if ffmpeg_path:
+if (ffmpeg_path):
     logging.info(f"ffmpeg is installed at: {ffmpeg_path}")
     os.environ["FFMPEG_BINARY"] = ffmpeg_path
 else:
@@ -46,7 +46,8 @@ else:
 
 try:
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pydub'])
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch', 'torchaudio', 'torchvision'])
+    # Install CUDA version of torch explicitly for CUDA 11.7
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch==1.11.0+cu117', 'torchaudio==0.11.0+cu117', 'torchvision==0.12.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pyannote.audio[cuda]'])
 except subprocess.CalledProcessError as e:
     logging.error(f"Failed to install packages: {e}")
