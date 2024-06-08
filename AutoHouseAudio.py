@@ -40,18 +40,18 @@ else:
 
 # Install pydub and CUDA-based pyannote.audio in the virtual environment
 if os.name == 'nt':
+    python_executable = os.path.join(venv_path, 'Scripts', 'python')
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchaudio==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchvision==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
 else:
     python_executable = os.path.join(venv_path, 'bin', 'python')
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchaudio==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchvision==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
 
 try:
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pydub'])
-    # Install CUDA version of torch explicitly for CUDA 11.7
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch==1.11.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchaudio==0.11.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torchvision==0.12.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
     subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pyannote.audio[cuda]'])
 except subprocess.CalledProcessError as e:
     logging.error(f"Failed to install packages: {e}")
@@ -79,6 +79,12 @@ except ImportError as e:
     sys.exit(1)
 
 # Check CUDA availability
+if not torch.cuda.is_available():
+    logging.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
+    error_logger.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
+    messagebox.showerror("Error", "CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
+    sys.exit(1)
+
 logging.info(f"PyTorch CUDA is available: {torch.cuda.is_available()}")
 logging.info(f"PyTorch CUDA device count: {torch.cuda.device_count()}")
 logging.info(f"PyTorch CUDA current device: {torch.cuda.current_device()}")
