@@ -63,14 +63,19 @@ def diarize_audio(audio_path, diarized_audio_path):
         command = ['ffmpeg', '-i', audio_path, '-ss', str(turn.start), '-to', str(turn.end), '-c', 'copy', segment_path]
         subprocess.call(command)
         segments.append(segment_path)
+        logging.info(f"Created segment: {segment_path}")
 
     with open("segments_list.txt", "w") as f:
         for segment in segments:
             f.write(f"file '{os.path.abspath(segment)}'\n")
 
+    logging.info("Merging segments into final diarized audio file...")
     command = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'segments_list.txt', '-c', 'copy', diarized_audio_path]
-    subprocess.call(command)
-    logging.info("Speaker diarization completed.")
+    result = subprocess.call(command)
+    if result == 0:
+        logging.info("Speaker diarization completed successfully.")
+    else:
+        logging.error("Error in merging segments to create the final diarized audio file.")
 
 def prompt_for_diarization():
     prompt_root = tk.Toplevel()
