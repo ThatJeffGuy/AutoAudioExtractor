@@ -27,6 +27,7 @@ def check_audio_streams(video_path):
     result = subprocess.run(['ffmpeg', '-i', video_path], stderr=subprocess.PIPE, text=True, encoding='utf-8', errors='replace')
     stream_info = result.stderr
     audio_streams = [line for line in stream_info.split('\n') if 'Audio' in line and 'eng' in line]
+    logging.info(f"Audio streams found: {audio_streams}")
     return audio_streams
 
 # Function to extract English audio from video using pydub
@@ -67,11 +68,13 @@ def diarize_audio(audio_path, diarized_audio_path):
     with open("diarization.txt", "w") as f:
         for turn, _, speaker in diarization.itertracks(yield_label=True):
             f.write(f"{turn.start:.1f} {turn.end:.1f} {speaker}\n")
+            logging.info(f"Diarization turn: {turn.start:.1f} {turn.end:.1f} {speaker}")
 
     segments = []
     for turn, _, speaker in diarization.itertracks(yield_label=True):
         segment_path = f"segment_{speaker}_{int(turn.start)}.wav"
         command = ['ffmpeg', '-i', audio_path, '-ss', str(turn.start), '-to', str(turn.end), '-c', 'copy', segment_path]
+        logging.info(f"Running command: {' '.join(command)}")
         result = subprocess.run(command, stderr=subprocess.PIPE, text=True)
         if result.returncode != 0:
             logging.error(f"Error creating segment: {segment_path}, Error: {result.stderr}")
@@ -83,9 +86,11 @@ def diarize_audio(audio_path, diarized_audio_path):
     with open("segments_list.txt", "w") as f:
         for segment in segments:
             f.write(f"file '{os.path.abspath(segment)}'\n")
+            logging.info(f"Segment added to list: {segment}")
 
     logging.info("Merging segments into final diarized audio file...")
     command = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'segments_list.txt', '-c', 'copy', diarized_audio_path]
+    logging.info(f"Running command: {' '.join(command)}")
     result = subprocess.run(command, stderr=subprocess.PIPE, text=True)
     if result.returncode != 0:
         logging.error(f"Error in merging segments: {result.stderr}")
@@ -95,15 +100,18 @@ def diarize_audio(audio_path, diarized_audio_path):
         logging.info("Speaker diarization completed successfully.")
 
 def prompt_for_diarization():
+    logging.info("Prompting user for diarization confirmation")
     prompt_root = tk.Toplevel()
     prompt_root.withdraw()
     prompt_root.title("Proceed with Diarization")
     prompt_root.attributes('-topmost', True)
     result = messagebox.askyesno("Proceed with Diarization", "Do you want to proceed with automatic diarization?", parent=prompt_root)
     prompt_root.destroy()
+    logging.info(f"User response for diarization: {result}")
     return result
 
 def main():
+    logging.info("Starting main function")
     root = tk.Tk()
     root.withdraw()
     root.lift()
@@ -147,9 +155,11 @@ def main():
                 messagebox.showerror("Diarization Error", str(e))
                 sys.exit(1)
         else:
+            logging.info("Diarization cancelled by user")
             messagebox.showinfo("Cancelled", "Diarization cancelled")
 
     root.destroy()
+    logging.info("Main function completed")
 
 if __name__ == "__main__":
     main()
