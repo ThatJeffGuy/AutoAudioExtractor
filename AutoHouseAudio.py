@@ -1,11 +1,9 @@
 import os
 import sys
 import subprocess
-import tempfile
 import shutil
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from pyAudioAnalysis import audioSegmentation as aS
 import wave
 
 # Ensure ffmpeg is in PATH
@@ -14,54 +12,44 @@ if not ffmpeg_path:
     print("ffmpeg is not installed or not in PATH. Please install ffmpeg and try again.")
     sys.exit(1)
 
-# Install CUDA-enabled torch, torchaudio, and torchvision globally first
+# Upgrade pip to the latest version
 try:
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--force-reinstall', 'torch==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--force-reinstall', 'torchaudio==2.2.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--force-reinstall', 'torchvision==0.15.2+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pip'])
 except subprocess.CalledProcessError as e:
-    print(f"Failed to install torch or related packages: {e}")
+    print(f"Failed to upgrade pip: {e}")
     sys.exit(1)
 
-# Install pyAudioAnalysis globally
+# Install and upgrade required packages globally
 try:
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pyAudioAnalysis'])
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', '--force-reinstall', 'torch==2.0.1+cu117', 'torchaudio==2.0.1+cu117', 'torchvision==0.15.2+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', '--force-reinstall', 'pyAudioAnalysis', 'speechbrain', 'soundfile', 'scipy'])
 except subprocess.CalledProcessError as e:
-    print(f"Failed to install pyAudioAnalysis: {e}")
+    print(f"Failed to install required packages: {e}")
     sys.exit(1)
-
-def create_and_activate_venv():
-    if os.getenv("IN_VENV") == "1":
-        return
-
-    venv_dir = tempfile.mkdtemp()
-    subprocess.check_call([sys.executable, '-m', 'venv', venv_dir])
-
-    python_executable = os.path.join(venv_dir, 'Scripts', 'python.exe') if os.name == 'nt' else os.path.join(venv_dir, 'bin', 'python')
-
-    # Install other dependencies
-    try:
-        subprocess.check_call([python_executable, '-m', 'pip', 'install', 'speechbrain', 'soundfile', 'scipy'])
-        # Reinstall torch packages to ensure CUDA compatibility within the virtual environment
-        subprocess.check_call([python_executable, '-m', 'pip', 'install', '--force-reinstall', 'torch==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-        subprocess.check_call([python_executable, '-m', 'pip', 'install', '--force-reinstall', 'torchaudio==2.2.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-        subprocess.check_call([python_executable, '-m', 'pip', 'install', '--force-reinstall', 'torchvision==0.15.2+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-    except subprocess.CalledProcessError as e:
-        print(f"Failed to install other dependencies: {e}")
-        sys.exit(1)
-
-    env = os.environ.copy()
-    env["IN_VENV"] = "1"
-    result = subprocess.run([python_executable] + sys.argv, env=env)
-    sys.exit(result.returncode)
 
 def check_cuda():
     try:
+        # Check if nvidia-smi is available
+        result = subprocess.run(["nvidia-smi"], capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError("nvidia-smi command failed. Ensure NVIDIA drivers are installed and CUDA is configured correctly.")
+        print("nvidia-smi output:\n", result.stdout)
+
         import torch
-        if not hasattr(torch, 'cuda') or not torch.cuda.is_available():
-            raise ImportError("CUDA is not available")
-    except ImportError as e:
+        if not hasattr(torch, 'cuda'):
+            raise ImportError("CUDA module is not available in torch")
+        if not torch.cuda.is_available():
+            raise ImportError("CUDA is not available on this system")
+        else:
+            print("CUDA is available. Device count:", torch.cuda.device_count())
+            for i in range(torch.cuda.device_count()):
+                print(f"CUDA Device {i}: {torch.cuda.get_device_name(i)}")
+    except Exception as e:
         print(f"CUDA check failed: {e}")
+        print("Debug Info:")
+        print("CUDA_HOME:", os.environ.get("CUDA_HOME"))
+        print("PATH:", os.environ.get("PATH"))
+        print("LD_LIBRARY_PATH:", os.environ.get("LD_LIBRARY_PATH"))
         sys.exit(1)
 
 def extract_audio(video_path, audio_path):
@@ -71,6 +59,8 @@ def extract_audio(video_path, audio_path):
     subprocess.run(command, check=True)
 
 def diarize_audio(audio_path, diarized_audio_path):
+    from pyAudioAnalysis import audioSegmentation as aS
+
     if os.path.exists("diarization.txt"):
         os.remove("diarization.txt")
 
@@ -107,35 +97,32 @@ def prompt_for_diarization():
     return result
 
 def main():
-    create_and_activate_venv()
-    if os.getenv("IN_VENV") == "1":
-        check_cuda()
-        try:
-            import speechbrain
-        except ImportError as e:
-            print(f"Failed to import speechbrain: {e}")
-            sys.exit(1)
+    check_cuda()
+    try:
+        import speechbrain
+    except ImportError as e:
+        print(f"Failed to import speechbrain: {e}")
+        sys.exit(1)
 
-        root = tk.Tk()
-        root.withdraw()
-        root.attributes('-topmost', True)
-        video_path = filedialog.askopenfilename(title="Select MKV File", filetypes=[("MKV files", "*.mkv")])
-        if not video_path:
-            print("No file selected. Exiting...")
-            sys.exit()
-        audio_path = os.path.splitext(video_path)[0] + ".wav"
-        diarized_audio_path = os.path.splitext(video_path)[0] + "_diarized.wav"
-        try:
-            extract_audio(video_path, audio_path)
-            if prompt_for_diarization():
-                diarize_audio(audio_path, diarized_audio_path)
-                print(f"Diarized audio saved as {diarized_audio_path}")
-            else:
-                print("Diarization cancelled")
-        except Exception as e:
-            print(f"Error: {e}")
-            sys.exit(1)
-        sys.exit(0)
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes('-topmost', True)
+    video_path = filedialog.askopenfilename(title="Select MKV File", filetypes=[("MKV files", "*.mkv")])
+    if not video_path:
+        print("No file selected. Exiting...")
+        sys.exit()
+    audio_path = os.path.splitext(video_path)[0] + ".wav"
+    diarized_audio_path = os.path.splitext(video_path)[0] + "_diarized.wav"
+    try:
+        extract_audio(video_path, audio_path)
+        if prompt_for_diarization():
+            diarize_audio(audio_path, diarized_audio_path)
+            print(f"Diarized audio saved as {diarized_audio_path}")
+        else:
+            print("Diarization cancelled")
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
