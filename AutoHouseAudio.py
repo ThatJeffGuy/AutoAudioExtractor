@@ -12,13 +12,6 @@ if not ffmpeg_path:
     print("ffmpeg is not installed or not in PATH. Please install ffmpeg and try again.")
     sys.exit(1)
 
-# Upgrade pip to the latest version
-subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pip'])
-
-# Install and upgrade required packages with CUDA support
-subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'torch', 'torchaudio', 'torchvision', '--extra-index-url', 'https://download.pytorch.org/whl/cu121'])
-subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pyAudioAnalysis', 'speechbrain', 'soundfile', 'scipy'])
-
 def extract_audio(video_path, audio_path):
     if os.path.exists(audio_path):
         os.remove(audio_path)
