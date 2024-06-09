@@ -49,8 +49,8 @@ if os.name == 'nt':
 else:
     python_executable = os.path.join(venv_path, 'bin', 'python')
 
-# Re-run the script in the context of the virtual environment
-if sys.executable != python_executable:
+# Re-run the script in the context of the virtual environment if not already in it
+if sys.executable != python_executable and not os.environ.get("IN_VENV"):
     logging.info(f"Re-running script with virtual environment: {python_executable}")
     result = subprocess.run([python_executable] + sys.argv, env={**os.environ, "IN_VENV": "1"})
     sys.exit(result.returncode)
