@@ -6,7 +6,6 @@ import tempfile
 import shutil
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from pyannote.audio import Pipeline
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -44,88 +43,67 @@ def create_and_activate_venv():
     python_executable = os.path.join(venv_dir, 'Scripts', 'python.exe') if os.name == 'nt' else os.path.join(venv_dir, 'bin', 'python')
     logging.info(f"Python executable path: {python_executable}")
 
-    if sys.executable != python_executable:
-        logging.info(f"Re-running script with virtual environment: {python_executable}")
-        env = os.environ.copy()
-        env["IN_VENV"] = "1"
-        result = subprocess.run([python_executable] + sys.argv, env=env)
-        sys.exit(result.returncode)
+    # Install necessary packages in the new virtual environment
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pyannote.audio[cuda]'])
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch==2.0.0+cu117', 'torchaudio==2.0.0+cu117', 'torchvision==0.15.1+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'speechbrain'])
 
-def is_package_installed(package_name):
-    try:
-        subprocess.check_call([sys.executable, '-m', 'pip', 'show', package_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return True
-    except subprocess.CalledProcessError:
-        return False
+    # Check for dependency conflicts
+    subprocess.check_call([python_executable, '-m', 'pip', 'check'])
 
-def install_urllib3():
-    urllib3_version = '2.2.1'
-    logging.info(f"Installing urllib3=={urllib3_version} from the web")
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', f'urllib3=={urllib3_version}'])
-
-def install_other_packages():
-    packages = [
-        'pydub',
-        'pyannote.audio[cuda]',
-        'speechbrain',
-    ]
-    
-    for package in packages:
-        if not is_package_installed(package):
-            logging.info(f"Installing {package}")
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
-        else:
-            logging.info(f"{package} is already installed")
-
-def install_torch_packages():
-    torch_packages = [
-        ('torch', '2.0.1+cu117'),
-        ('torchaudio', '2.0.1+cu117'),
-        ('torchvision', '0.15.2+cu117'),
-    ]
-
-    for package_name, package_version in torch_packages:
-        logging.info(f"Force installing {package_name}=={package_version}")
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', f'{package_name}=={package_version}', '--force-reinstall', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+    logging.info(f"Re-running script with virtual environment: {python_executable}")
+    env = os.environ.copy()
+    env["IN_VENV"] = "1"
+    result = subprocess.run([python_executable] + sys.argv, env=env)
+    sys.exit(result.returncode)
 
 def check_cuda():
     try:
         import torch
         logging.info(f"PyTorch version: {getattr(torch, '__version__', 'unknown')}")
         if not hasattr(torch, 'cuda'):
-            logging.error("CUDA attribute not found in torch. Ensure CUDA-enabled PyTorch is installed.")
-            error_logger.error("CUDA attribute not found in torch. Ensure CUDA-enabled PyTorch is installed.")
-            messagebox.showerror("Error", "CUDA attribute not found in torch. Ensure CUDA-enabled PyTorch is installed.")
-            sys.exit(1)
+            raise ImportError("CUDA attribute not found in torch")
         if not torch.cuda.is_available():
-            logging.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
-            error_logger.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
-            messagebox.showerror("Error", "CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
-            sys.exit(1)
+            raise ImportError("CUDA is not available")
         logging.info(f"CUDA available: {torch.cuda.is_available()}")
         logging.info(f"CUDA device count: {torch.cuda.device_count()}")
         logging.info(f"Current CUDA device: {torch.cuda.current_device()}")
         logging.info(f"CUDA device name: {torch.cuda.get_device_name(torch.cuda.current_device())}")
     except ImportError as e:
-        logging.error(f"Error importing torch: {e}")
-        error_logger.error(f"Error importing torch: {e}")
-        messagebox.showerror("Error", f"Error importing torch: {e}. Please ensure torch with CUDA support is installed.")
+        logging.error(f"CUDA check failed: {e}")
+        error_logger.error(f"CUDA check failed: {e}")
+        messagebox.showerror("Error", f"CUDA check failed: {e}")
         sys.exit(1)
 
 def extract_audio(video_path, audio_path):
     logging.info(f"Extracting English audio from {video_path}")
+    if os.path.exists(audio_path):
+        logging.info(f"Audio file {audio_path} already exists. Removing it.")
+        os.remove(audio_path)
     command = ['ffmpeg', '-i', video_path, '-map', '0:2', '-q:a', '0', audio_path]
     subprocess.run(command, check=True)
     logging.info(f"Audio extraction completed: {audio_path}")
 
 def diarize_audio(audio_path, diarized_audio_path):
     logging.info(f"Starting speaker diarization for {audio_path}")
+    from pyannote.audio import Pipeline  # Import here after ensuring the package is installed
+    from speechbrain.pretrained import SpeakerRecognition  # Ensure this import is here
+
+    if os.path.exists("diarization.txt"):
+        logging.info("Diarization file diarization.txt already exists. Removing it.")
+        os.remove("diarization.txt")
+
+    if os.path.exists(diarized_audio_path):
+        logging.info(f"Diarized audio file {diarized_audio_path} already exists. Removing it.")
+        os.remove(diarized_audio_path)
+
     HUGGING_FACE_TOKEN = "your_hugging_face_token"  # Replace with your actual Hugging Face token
     pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization@2.1", use_auth_token=HUGGING_FACE_TOKEN, device='cuda')
     logging.info("Pipeline initialized")
     diarization = pipeline({"uri": "filename", "audio": audio_path})
     logging.info("Diarization process completed")
-    spkrec = sb.pretrained.interfaces.SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="tmp_dir", run_opts={"device":"cuda"})
+    
+    spkrec = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="tmp_dir", run_opts={"device":"cuda"})
     logging.info("SpeechBrain model loaded")
     with open("diarization.txt", "w") as f:
         for turn, _, speaker in diarization.itertracks(yield_label=True):
@@ -134,6 +112,9 @@ def diarize_audio(audio_path, diarized_audio_path):
     segments = []
     for turn, _, speaker in diarization.itertracks(yield_label=True):
         segment_path = f"segment_{speaker}_{int(turn.start)}.wav"
+        if os.path.exists(segment_path):
+            logging.info(f"Segment file {segment_path} already exists. Removing it.")
+            os.remove(segment_path)
         command = ['ffmpeg', '-i', audio_path, '-ss', str(turn.start), '-to', str(turn.end), '-c', 'copy', segment_path]
         subprocess.run(command, check=True)
         segments.append(segment_path)
@@ -155,9 +136,6 @@ def prompt_for_diarization():
 def main():
     create_and_activate_venv()
     if os.getenv("IN_VENV") == "1":
-        install_urllib3()
-        install_other_packages()
-        install_torch_packages()
         check_cuda()
         root = tk.Tk()
         root.withdraw()
