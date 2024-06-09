@@ -6,6 +6,7 @@ import tempfile
 import shutil
 import tkinter as tk
 from tkinter import filedialog, messagebox
+from pyannote.audio import Pipeline
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

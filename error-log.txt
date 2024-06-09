@@ -473,4 +473,4 @@ Press [q] to stop, [?] for help
 size=       0KiB time=N/A bitrate=N/A speed=N/A
 Conversion failed!
 2024-06-09 11:38:53,794 - ERROR - Error: Command '['ffmpeg', '-i', 'C:/Users/Jeff/Downloads/House - S07E01 - Now What - WEBDL-1080p tt0412142 2010-09-20.mkv', '-q:a', '0', '-map', 'a', 'C:/Users/Jeff/Downloads/House - S07E01 - Now What - WEBDL-1080p tt0412142 2010-09-20.wav']' returned non-zero exit status 4294967274.
-2024-06-09 11:38:53,795 - ERROR - Error: Command '['ffmpeg', '-i', 'C:/Users/Jeff/Downloads/House - S07E01 - Now What - WEBDL-1080p tt0412142 2010-09-20.mkv', '-q:a', '0', '-map', 'a', 'C:/Users/Jeff/Downloads/House - S07E01 - Now What - WEBDL-1080p tt0412142 2010-09-20.wav']' returned non-zero exit status 4294967274.
+2024-06-09 11:38:53,795 - ERROR - Error: Command '['ffmpeg', '-i', 'C:/Users/Jeff/Downloads/House - S07E01 - Now What - WEBDL-1080p tt0412142 2010-09-20.mkv', '-q:a', '0', '-map', 'a', 'C:/Users/Jeff/Downloads/House - S07E01 - Now What - WEBDL-1080p tt0412142 2010-09-20.wav']' returned non-zero exit status 4294967274.2024-06-09 11:46:57,259 - ERROR - Error: name 'Pipeline' is not defined
