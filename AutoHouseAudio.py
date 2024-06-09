@@ -43,13 +43,32 @@ def create_and_activate_venv():
     python_executable = os.path.join(venv_dir, 'Scripts', 'python.exe') if os.name == 'nt' else os.path.join(venv_dir, 'bin', 'python')
     logging.info(f"Python executable path: {python_executable}")
 
-    # Install necessary packages in the new virtual environment
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch==2.0.1+cu117', 'torchaudio==2.0.1+cu117', 'torchvision==0.15.2+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pyannote.audio[cuda]'])
-    subprocess.check_call([python_executable, '-m', 'pip', 'install', 'speechbrain'])
+    # Uninstall any existing versions to avoid conflicts
+    try:
+        subprocess.check_call([python_executable, '-m', 'pip', 'uninstall', '-y', 'torch', 'torchaudio', 'torchvision'])
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to uninstall existing versions: {e}")
+
+    # Install torch and compatible versions of torchaudio and torchvision
+    try:
+        subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch==2.0.1+cu117', 'torchaudio==2.0.1+cu117', 'torchvision==0.15.1+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to install torch or related packages: {e}")
+        sys.exit(1)
+
+    # Install other dependencies
+    try:
+        subprocess.check_call([python_executable, '-m', 'pip', 'install', 'pyannote.audio[cuda]', 'speechbrain'])
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to install other dependencies: {e}")
+        sys.exit(1)
 
     # Check for dependency conflicts
-    subprocess.check_call([python_executable, '-m', 'pip', 'check'])
+    try:
+        subprocess.check_call([python_executable, '-m', 'pip', 'check'])
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Dependency conflicts found: {e}")
+        sys.exit(1)
 
     logging.info(f"Re-running script with virtual environment: {python_executable}")
     env = os.environ.copy()
