@@ -30,6 +30,7 @@ def diarize_audio(audio_path, diarized_audio_path):
     install_package('imbalanced-learn')
     install_package('plotly')
     from pyAudioAnalysis import audioSegmentation as aS
+    from pyAudioAnalysis import audioBasicIO
 
     if os.path.exists("diarization.txt"):
         os.remove("diarization.txt")
@@ -37,23 +38,24 @@ def diarize_audio(audio_path, diarized_audio_path):
     if os.path.exists(diarized_audio_path):
         os.remove(diarized_audio_path)
 
-    flags, classes = aS.mtFileClassification(audio_path, "data/svmRBFmodel", "svm_rbf")
-    segments = []
-    with wave.open(audio_path, 'rb') as wf:
-        sample_rate = wf.getframerate()
-        duration = wf.getnframes() / sample_rate
-    for i, flag in enumerate(flags):
-        segment_path = f"segment_{classes[flag]}_{i}.wav"
+    [Fs, x] = audioBasicIO.read_audio_file(audio_path)
+    segments = aS.silence_removal(x, Fs, 0.020, 0.020, smooth_window=1.0, weight=0.3, plot=False)
+
+    segment_files = []
+    for i, segment in enumerate(segments):
+        start_time = segment[0]
+        end_time = segment[1]
+        segment_path = f"segment_{i}.wav"
         if os.path.exists(segment_path):
             os.remove(segment_path)
-        start_time = i * (duration / len(flags))
-        end_time = (i + 1) * (duration / len(flags))
         command = ['ffmpeg', '-i', audio_path, '-ss', str(start_time), '-to', str(end_time), '-c', 'copy', segment_path]
         subprocess.run(command, check=True)
-        segments.append(segment_path)
+        segment_files.append(segment_path)
+
     with open("segments_list.txt", "w") as f:
-        for segment in segments:
+        for segment in segment_files:
             f.write(f"file '{os.path.abspath(segment)}'\n")
+
     command = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'segments_list.txt', '-c', 'copy', diarized_audio_path]
     subprocess.run(command, check=True)
 
