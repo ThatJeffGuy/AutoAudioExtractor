@@ -1,1 +1,2 @@
 2024-06-09 12:20:13,901 - ERROR - Error: No module named 'speechbrain.pretrained'
+2024-06-09 14:07:29,721 - ERROR - CUDA check failed: CUDA is not available

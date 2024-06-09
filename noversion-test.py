@@ -43,11 +43,15 @@ def create_and_activate_venv():
     python_executable = os.path.join(venv_dir, 'Scripts', 'python.exe') if os.name == 'nt' else os.path.join(venv_dir, 'bin', 'python')
     logging.info(f"Python executable path: {python_executable}")
 
-    # Force install specific versions of torch, torchaudio, and torchvision
+    # Uninstall any existing versions to avoid conflicts
     try:
-        subprocess.check_call([python_executable, '-m', 'pip', 'install', '--force-reinstall', 'torch==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-        subprocess.check_call([python_executable, '-m', 'pip', 'install', '--force-reinstall', 'torchaudio==2.0.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-        subprocess.check_call([python_executable, '-m', 'pip', 'install', '--force-reinstall', 'torchvision==0.15.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+        subprocess.check_call([python_executable, '-m', 'pip', 'uninstall', '-y', 'torch', 'torchaudio', 'torchvision'])
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to uninstall existing versions: {e}")
+
+    # Install torch and compatible versions of torchaudio and torchvision
+    try:
+        subprocess.check_call([python_executable, '-m', 'pip', 'install', 'torch', 'torchaudio', 'torchvision', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to install torch or related packages: {e}")
         sys.exit(1)
@@ -101,8 +105,8 @@ def extract_audio(video_path, audio_path):
 
 def diarize_audio(audio_path, diarized_audio_path):
     logging.info(f"Starting speaker diarization for {audio_path}")
-    from pyannote.audio import Pipeline
-    from speechbrain.pretrained import SpeakerRecognition
+    from pyannote.audio import Pipeline  # Import here after ensuring the package is installed
+    from speechbrain.pretrained import SpeakerRecognition  # Ensure this import is here
 
     if os.path.exists("diarization.txt"):
         logging.info("Diarization file diarization.txt already exists. Removing it.")
@@ -112,7 +116,7 @@ def diarize_audio(audio_path, diarized_audio_path):
         logging.info(f"Diarized audio file {diarized_audio_path} already exists. Removing it.")
         os.remove(diarized_audio_path)
 
-    HUGGING_FACE_TOKEN = "your_hugging_face_token"
+    HUGGING_FACE_TOKEN = "your_hugging_face_token"  # Replace with your actual Hugging Face token
     pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization@2.1", use_auth_token=HUGGING_FACE_TOKEN, device='cuda')
     logging.info("Pipeline initialized")
     diarization = pipeline({"uri": "filename", "audio": audio_path})
