@@ -12,6 +12,12 @@ if not ffmpeg_path:
     print("ffmpeg is not installed or not in PATH. Please install ffmpeg and try again.")
     sys.exit(1)
 
+def install_package(package_name):
+    try:
+        __import__(package_name)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package_name])
+
 def extract_audio(video_path, audio_path):
     if os.path.exists(audio_path):
         os.remove(audio_path)
@@ -19,6 +25,10 @@ def extract_audio(video_path, audio_path):
     subprocess.run(command, check=True)
 
 def diarize_audio(audio_path, diarized_audio_path):
+    install_package('hmmlearn')
+    install_package('eyed3')
+    install_package('imbalanced-learn')
+    install_package('plotly')
     from pyAudioAnalysis import audioSegmentation as aS
 
     if os.path.exists("diarization.txt"):
