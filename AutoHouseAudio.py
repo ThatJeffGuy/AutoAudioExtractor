@@ -67,11 +67,27 @@ def uninstall_package(package_name):
         messagebox.showerror("Error", f"Failed to uninstall {package_name}. Please check the logs for more details.")
         sys.exit(1)
 
-def install_packages():
-    packages = [
+def install_torch_packages():
+    torch_packages = [
         ('torch', '2.0.1+cu117'),
         ('torchaudio', '2.0.1+cu117'),
         ('torchvision', '0.15.2+cu117'),
+    ]
+
+    for package_name, package_version in torch_packages:
+        try:
+            installed_version = subprocess.check_output([sys.executable, '-m', 'pip', 'show', package_name]).decode()
+            if package_version in installed_version:
+                logging.info(f"{package_name}=={package_version} is already installed")
+                continue
+        except subprocess.CalledProcessError:
+            pass
+
+        logging.info(f"Installing {package_name}=={package_version}")
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', f'{package_name}=={package_version}', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+
+def install_other_packages():
+    packages = [
         'pydub',
         'pyannote.audio[cuda]',
         'speechbrain',
@@ -79,28 +95,15 @@ def install_packages():
     ]
     
     for package in packages:
-        if isinstance(package, tuple):
-            package_name, package_version = package
-            try:
-                installed_version = subprocess.check_output([sys.executable, '-m', 'pip', 'show', package_name])
-                if package_version in installed_version.decode():
-                    logging.info(f"{package_name}=={package_version} is already installed")
-                    continue
-            except subprocess.CalledProcessError:
-                pass
-            
-            logging.info(f"Installing {package_name}=={package_version}")
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', f'{package_name}=={package_version}', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+        if package.endswith('.whl'):
+            logging.info(f"Installing {package}")
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
         else:
-            if package.endswith('.whl'):
+            if not is_package_installed(package):
                 logging.info(f"Installing {package}")
                 subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
             else:
-                if not is_package_installed(package):
-                    logging.info(f"Installing {package}")
-                    subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
-                else:
-                    logging.info(f"{package} is already installed")
+                logging.info(f"{package} is already installed")
 
 def check_cuda():
     try:
@@ -169,7 +172,8 @@ def prompt_for_diarization():
 def main():
     create_and_activate_venv()
     if os.getenv("IN_VENV") == "1":
-        install_packages()
+        install_torch_packages()
+        install_other_packages()
         check_cuda()
         root = tk.Tk()
         root.withdraw()
