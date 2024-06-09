@@ -29,6 +29,12 @@ else:
     messagebox.showerror("Error", "ffmpeg is not installed or not in PATH. Please install ffmpeg and try again.")
     sys.exit(1)
 
+# Set CUDA paths
+os.environ['CUDA_HOME'] = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.7'  # Adjust path based on your installation
+os.environ['PATH'] += ';C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.7/bin'
+os.environ['PATH'] += ';C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.7/libnvvp'
+os.environ['PATH'] += ';C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.7/extras/CUPTI/lib64'
+
 # Determine virtual environment directory
 venv_root_dir = os.environ.get('VENV_DIR', os.path.join(os.path.expanduser("~"), 'venv'))
 venv_path = os.path.join(venv_root_dir, 'autohouse_audio_env')
@@ -42,6 +48,13 @@ if os.name == 'nt':
     python_executable = os.path.join(venv_path, 'Scripts', 'python')
 else:
     python_executable = os.path.join(venv_path, 'bin', 'python')
+
+# Re-run the script in the context of the virtual environment
+if sys.executable != python_executable and not os.environ.get("IN_VENV"):
+    logging.info(f"Re-running script with virtual environment: {python_executable}")
+    os.environ["IN_VENV"] = "1"
+    result = subprocess.run([python_executable] + sys.argv, env=os.environ)
+    sys.exit(result.returncode)
 
 # Function to check if a package is installed
 def is_package_installed(package_name):
@@ -57,7 +70,8 @@ packages = [
     ('torchaudio', '2.0.1+cu117'),
     ('torchvision', '0.15.2+cu117'),
     'pydub',
-    'pyannote.audio[cuda]'
+    'pyannote.audio[cuda]',
+    'speechbrain'
 ]
 
 for package in packages:
@@ -82,12 +96,6 @@ for package in packages:
                 messagebox.showerror("Error", f"Failed to install {package_name}. Please check your installation.")
                 sys.exit(1)
 
-# Re-run the script in the context of the virtual environment
-if sys.executable != python_executable:
-    logging.info(f"Re-running script with virtual environment: {python_executable}")
-    result = subprocess.run([python_executable] + sys.argv)
-    sys.exit(result.returncode)
-
 # At this point, the script is running in the virtual environment with pydub and pyannote.audio installed
 try:
     from pydub import AudioSegment
@@ -101,17 +109,18 @@ except ImportError as e:
     messagebox.showerror("Error", f"Error importing pydub, pyannote.audio, torch, or speechbrain: {e}. Please ensure they are installed.")
     sys.exit(1)
 
-# Check CUDA availability
-if not torch.cuda.is_available():
+# Log CUDA availability for debugging
+cuda_available = torch.cuda.is_available()
+logging.info(f"CUDA available: {cuda_available}")
+if cuda_available:
+    logging.info(f"CUDA device count: {torch.cuda.device_count()}")
+    logging.info(f"Current CUDA device: {torch.cuda.current_device()}")
+    logging.info(f"CUDA device name: {torch.cuda.get_device_name(torch.cuda.current_device())}")
+else:
     logging.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
     error_logger.error("CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
     messagebox.showerror("Error", "CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.")
     sys.exit(1)
-
-logging.info(f"PyTorch CUDA is available: {torch.cuda.is_available()}")
-logging.info(f"PyTorch CUDA device count: {torch.cuda.device_count()}")
-logging.info(f"PyTorch CUDA current device: {torch.cuda.current_device()}")
-logging.info(f"PyTorch CUDA device name: {torch.cuda.get_device_name(torch.cuda.current_device())}")
 
 # Function to check the audio streams in the video file using ffmpeg
 def check_audio_streams(video_path):

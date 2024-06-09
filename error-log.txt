@@ -1,3 +1,8 @@
 2024-06-08 18:14:56,823 - ERROR - Failed to install packages: Command '['C:\\Users\\Jeff\\venv\\autohouse_audio_env\\Scripts\\python.exe', '-m', 'pip', 'install', 'torch==1.11.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117']' returned non-zero exit status 1.
 2024-06-08 18:15:23,640 - ERROR - Failed to install packages: Command '['C:\\Users\\Jeff\\venv\\autohouse_audio_env\\Scripts\\python.exe', '-m', 'pip', 'install', 'torch==1.11.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117']' returned non-zero exit status 1.
 2024-06-08 18:18:13,636 - ERROR - Failed to install packages: Command '['C:\\Users\\Jeff\\venv\\autohouse_audio_env\\Scripts\\python.exe', '-m', 'pip', 'install', 'torch==1.11.0+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117']' returned non-zero exit status 1.
+2024-06-08 20:57:34,454 - ERROR - CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.
+2024-06-08 21:00:19,059 - ERROR - CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.
+2024-06-08 21:03:36,945 - ERROR - CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.
+2024-06-08 21:11:25,752 - ERROR - CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.
+2024-06-08 21:12:56,522 - ERROR - CUDA is not available. Ensure you have a compatible GPU and CUDA is properly installed.
