@@ -32,18 +32,12 @@ else:
     logging.info(f"ffmpeg is installed at: {ffmpeg_path}")
 
 def create_and_activate_venv():
-    venv_path = os.path.join(os.path.expanduser("~"), 'venv', 'autohouse_audio_env')
-    logging.info(f"Virtual environment path: {venv_path}")
-    if not os.path.exists(venv_path):
-        logging.info(f"Creating virtual environment at: {venv_path}")
-        subprocess.check_call([sys.executable, '-m', 'venv', venv_path])
+    venv_dir = tempfile.mkdtemp()
+    logging.info(f"Creating virtual environment in temporary directory: {venv_dir}")
+    subprocess.check_call([sys.executable, '-m', 'venv', venv_dir])
 
-    python_executable = os.path.join(venv_path, 'Scripts', 'python.exe') if os.name == 'nt' else os.path.join(venv_path, 'bin', 'python')
+    python_executable = os.path.join(venv_dir, 'Scripts', 'python.exe') if os.name == 'nt' else os.path.join(venv_dir, 'bin', 'python')
     logging.info(f"Python executable path: {python_executable}")
-
-    if not os.path.exists(python_executable):
-        logging.error(f"Python executable not found at: {python_executable}")
-        sys.exit(1)
 
     if sys.executable != python_executable:
         logging.info(f"Re-running script with virtual environment: {python_executable}")
