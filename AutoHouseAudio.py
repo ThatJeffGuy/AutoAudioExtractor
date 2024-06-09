@@ -57,15 +57,10 @@ def is_package_installed(package_name):
     except subprocess.CalledProcessError:
         return False
 
-def uninstall_package(package_name):
-    try:
-        subprocess.check_call([sys.executable, '-m', 'pip', 'uninstall', '-y', package_name])
-        logging.info(f"Uninstalled {package_name}")
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to uninstall {package_name}: {e}")
-        error_logger.error(f"Failed to uninstall {package_name}: {e}")
-        messagebox.showerror("Error", f"Failed to uninstall {package_name}. Please check the logs for more details.")
-        sys.exit(1)
+def install_urllib3():
+    urllib3_version = '2.2.1'
+    logging.info(f"Installing urllib3=={urllib3_version} from the web")
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', f'urllib3=={urllib3_version}'])
 
 def install_torch_packages():
     torch_packages = [
@@ -91,19 +86,14 @@ def install_other_packages():
         'pydub',
         'pyannote.audio[cuda]',
         'speechbrain',
-        './path/to/urllib3-2.2.1-py3-none-any.whl'  # Update this path to the actual location of the urllib3 wheel file
     ]
     
     for package in packages:
-        if package.endswith('.whl'):
+        if not is_package_installed(package):
             logging.info(f"Installing {package}")
             subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
         else:
-            if not is_package_installed(package):
-                logging.info(f"Installing {package}")
-                subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
-            else:
-                logging.info(f"{package} is already installed")
+            logging.info(f"{package} is already installed")
 
 def check_cuda():
     try:
@@ -172,6 +162,7 @@ def prompt_for_diarization():
 def main():
     create_and_activate_venv()
     if os.getenv("IN_VENV") == "1":
+        install_urllib3()
         install_torch_packages()
         install_other_packages()
         check_cuda()
