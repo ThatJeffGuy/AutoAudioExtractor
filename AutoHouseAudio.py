@@ -50,10 +50,9 @@ else:
     python_executable = os.path.join(venv_path, 'bin', 'python')
 
 # Re-run the script in the context of the virtual environment
-if sys.executable != python_executable and not os.environ.get("IN_VENV"):
+if sys.executable != python_executable:
     logging.info(f"Re-running script with virtual environment: {python_executable}")
-    os.environ["IN_VENV"] = "1"
-    result = subprocess.run([python_executable] + sys.argv, env=os.environ)
+    result = subprocess.run([python_executable] + sys.argv, env={**os.environ, "IN_VENV": "1"})
     sys.exit(result.returncode)
 
 # Function to check if a package is installed
