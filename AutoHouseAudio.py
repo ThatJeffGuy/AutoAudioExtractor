@@ -3,7 +3,7 @@ import sys
 import subprocess
 import shutil
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog
 import wave
 
 # Ensure ffmpeg is in PATH
@@ -13,54 +13,11 @@ if not ffmpeg_path:
     sys.exit(1)
 
 # Upgrade pip to the latest version
-try:
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pip'])
-except subprocess.CalledProcessError as e:
-    print(f"Failed to upgrade pip: {e}")
-    sys.exit(1)
+subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pip'])
 
-# Install and upgrade required packages globally with CUDA 12.1 support
-try:
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', '--force-reinstall', 'torch', 'torchaudio', 'torchvision', '--extra-index-url', 'https://download.pytorch.org/whl/cu121'])
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', '--force-reinstall', 'pyAudioAnalysis', 'speechbrain', 'soundfile', 'scipy'])
-except subprocess.CalledProcessError as e:
-    print(f"Failed to install required packages: {e}")
-    sys.exit(1)
-
-def check_cuda():
-    try:
-        result = subprocess.run(["nvidia-smi"], capture_output=True, text=True)
-        if result.returncode != 0:
-            raise RuntimeError("nvidia-smi command failed. Ensure NVIDIA drivers are installed and CUDA is configured correctly.")
-        print("nvidia-smi output:\n", result.stdout)
-
-        import torch
-        if not hasattr(torch, 'cuda'):
-            raise ImportError("CUDA module is not available in torch")
-        if not torch.cuda.is_available():
-            raise ImportError("CUDA is not available on this system")
-        else:
-            print("CUDA is available. Device count:", torch.cuda.device_count())
-            for i in range(torch.cuda.device_count()):
-                print(f"CUDA Device {i}: {torch.cuda.get_device_name(i)}")
-    except Exception as e:
-        print(f"CUDA check failed: {e}")
-        print("Debug Info:")
-        print("CUDA_HOME:", os.environ.get("CUDA_HOME"))
-        print("PATH:", os.environ.get("PATH"))
-        print("LD_LIBRARY_PATH:", os.environ.get("LD_LIBRARY_PATH"))
-        sys.exit(1)
-
-def check_cudnn():
-    try:
-        import torch
-        if torch.backends.cudnn.is_available():
-            print("cuDNN is available")
-        else:
-            raise ImportError("cuDNN is not available")
-    except Exception as e:
-        print(f"cuDNN check failed: {e}")
-        sys.exit(1)
+# Install and upgrade required packages with CUDA support
+subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'torch', 'torchaudio', 'torchvision', '--extra-index-url', 'https://download.pytorch.org/whl/cu121'])
+subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pyAudioAnalysis', 'speechbrain', 'soundfile', 'scipy'])
 
 def extract_audio(video_path, audio_path):
     if os.path.exists(audio_path):
@@ -96,25 +53,8 @@ def diarize_audio(audio_path, diarized_audio_path):
             f.write(f"file '{os.path.abspath(segment)}'\n")
     command = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', 'segments_list.txt', '-c', 'copy', diarized_audio_path]
     subprocess.run(command, check=True)
-    print("Speaker diarization completed successfully.")
-
-def prompt_for_diarization():
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes('-topmost', True)
-    result = messagebox.askyesno("Proceed with Diarization", "Do you want to proceed with automatic diarization?", parent=root)
-    root.destroy()
-    return result
 
 def main():
-    check_cuda()
-    check_cudnn()
-    try:
-        import speechbrain
-    except ImportError as e:
-        print(f"Failed to import speechbrain: {e}")
-        sys.exit(1)
-
     root = tk.Tk()
     root.withdraw()
     root.attributes('-topmost', True)
@@ -124,16 +64,9 @@ def main():
         sys.exit()
     audio_path = os.path.splitext(video_path)[0] + ".wav"
     diarized_audio_path = os.path.splitext(video_path)[0] + "_diarized.wav"
-    try:
-        extract_audio(video_path, audio_path)
-        if prompt_for_diarization():
-            diarize_audio(audio_path, diarized_audio_path)
-            print(f"Diarized audio saved as {diarized_audio_path}")
-        else:
-            print("Diarization cancelled")
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+    extract_audio(video_path, audio_path)
+    diarize_audio(audio_path, diarized_audio_path)
+    print(f"Diarized audio saved as {diarized_audio_path}")
 
 if __name__ == "__main__":
     main()
