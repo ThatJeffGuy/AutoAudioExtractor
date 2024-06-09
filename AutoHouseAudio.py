@@ -19,9 +19,9 @@ except subprocess.CalledProcessError as e:
     print(f"Failed to upgrade pip: {e}")
     sys.exit(1)
 
-# Install and upgrade required packages globally
+# Install and upgrade required packages globally with CUDA 12.1 support
 try:
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', '--force-reinstall', 'torch==2.0.1+cu117', 'torchaudio==2.0.1+cu117', 'torchvision==0.15.2+cu117', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', '--force-reinstall', 'torch', 'torchaudio', 'torchvision', '--extra-index-url', 'https://download.pytorch.org/whl/cu121'])
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', '--force-reinstall', 'pyAudioAnalysis', 'speechbrain', 'soundfile', 'scipy'])
 except subprocess.CalledProcessError as e:
     print(f"Failed to install required packages: {e}")
@@ -29,7 +29,6 @@ except subprocess.CalledProcessError as e:
 
 def check_cuda():
     try:
-        # Check if nvidia-smi is available
         result = subprocess.run(["nvidia-smi"], capture_output=True, text=True)
         if result.returncode != 0:
             raise RuntimeError("nvidia-smi command failed. Ensure NVIDIA drivers are installed and CUDA is configured correctly.")
@@ -50,6 +49,17 @@ def check_cuda():
         print("CUDA_HOME:", os.environ.get("CUDA_HOME"))
         print("PATH:", os.environ.get("PATH"))
         print("LD_LIBRARY_PATH:", os.environ.get("LD_LIBRARY_PATH"))
+        sys.exit(1)
+
+def check_cudnn():
+    try:
+        import torch
+        if torch.backends.cudnn.is_available():
+            print("cuDNN is available")
+        else:
+            raise ImportError("cuDNN is not available")
+    except Exception as e:
+        print(f"cuDNN check failed: {e}")
         sys.exit(1)
 
 def extract_audio(video_path, audio_path):
@@ -98,6 +108,7 @@ def prompt_for_diarization():
 
 def main():
     check_cuda()
+    check_cudnn()
     try:
         import speechbrain
     except ImportError as e:
