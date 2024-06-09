@@ -32,6 +32,10 @@ else:
     logging.info(f"ffmpeg is installed at: {ffmpeg_path}")
 
 def create_and_activate_venv():
+    if os.getenv("IN_VENV") == "1":
+        logging.info("Already running in the virtual environment.")
+        return
+
     venv_dir = tempfile.mkdtemp()
     logging.info(f"Creating virtual environment in temporary directory: {venv_dir}")
     subprocess.check_call([sys.executable, '-m', 'venv', venv_dir])
@@ -41,7 +45,9 @@ def create_and_activate_venv():
 
     if sys.executable != python_executable:
         logging.info(f"Re-running script with virtual environment: {python_executable}")
-        result = subprocess.run([python_executable] + sys.argv, env={**os.environ, "IN_VENV": "1"})
+        env = os.environ.copy()
+        env["IN_VENV"] = "1"
+        result = subprocess.run([python_executable] + sys.argv, env=env)
         sys.exit(result.returncode)
 
 def is_package_installed(package_name):
@@ -68,24 +74,33 @@ def install_packages():
         ('torchvision', '0.15.2+cu117'),
         'pydub',
         'pyannote.audio[cuda]',
-        'speechbrain'
+        'speechbrain',
+        './path/to/urllib3-2.2.1-py3-none-any.whl'  # Update this path to the actual location of the urllib3 wheel file
     ]
+    
     for package in packages:
         if isinstance(package, tuple):
             package_name, package_version = package
-            if not is_package_installed(package_name) or 'cpu' in subprocess.check_output([sys.executable, '-m', 'pip', 'show', package_name]).decode().lower():
-                if is_package_installed(package_name):
-                    uninstall_package(package_name)
-                logging.info(f"Installing {package_name}=={package_version}")
-                subprocess.check_call([sys.executable, '-m', 'pip', 'install', f'{package_name}=={package_version}', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-            else:
-                logging.info(f"{package_name} is already installed")
+            try:
+                installed_version = subprocess.check_output([sys.executable, '-m', 'pip', 'show', package_name])
+                if package_version in installed_version.decode():
+                    logging.info(f"{package_name}=={package_version} is already installed")
+                    continue
+            except subprocess.CalledProcessError:
+                pass
+            
+            logging.info(f"Installing {package_name}=={package_version}")
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', f'{package_name}=={package_version}', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
         else:
-            if not is_package_installed(package):
+            if package.endswith('.whl'):
                 logging.info(f"Installing {package}")
                 subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
             else:
-                logging.info(f"{package} is already installed")
+                if not is_package_installed(package):
+                    logging.info(f"Installing {package}")
+                    subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
+                else:
+                    logging.info(f"{package} is already installed")
 
 def check_cuda():
     try:
@@ -153,34 +168,35 @@ def prompt_for_diarization():
 
 def main():
     create_and_activate_venv()
-    install_packages()
-    check_cuda()
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes('-topmost', True)
-    video_path = filedialog.askopenfilename(title="Select MKV File", filetypes=[("MKV files", "*.mkv")])
-    if not video_path:
-        logging.error("No file selected. Exiting...")
-        error_logger.error("No file selected. Exiting...")
-        messagebox.showerror("Error", "No file selected. Exiting...")
-        sys.exit()
-    audio_path = os.path.splitext(video_path)[0] + ".wav"
-    diarized_audio_path = os.path.splitext(video_path)[0] + "_diarized.wav"
-    try:
-        extract_audio(video_path, audio_path)
-        if prompt_for_diarization():
-            diarize_audio(audio_path, diarized_audio_path)
-            messagebox.showinfo("Success", f"Diarized audio saved as {diarized_audio_path}")
-        else:
-            logging.info("Diarization cancelled by user")
-            messagebox.showinfo("Cancelled", "Diarization cancelled")
-    except Exception as e:
-        logging.error(f"Error: {e}")
-        error_logger.error(f"Error: {e}")
-        messagebox.showerror("Error", str(e))
-        sys.exit(1)
-    root.destroy()
-    logging.info("Main function completed")
+    if os.getenv("IN_VENV") == "1":
+        install_packages()
+        check_cuda()
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)
+        video_path = filedialog.askopenfilename(title="Select MKV File", filetypes=[("MKV files", "*.mkv")])
+        if not video_path:
+            logging.error("No file selected. Exiting...")
+            error_logger.error("No file selected. Exiting...")
+            messagebox.showerror("Error", "No file selected. Exiting...")
+            sys.exit()
+        audio_path = os.path.splitext(video_path)[0] + ".wav"
+        diarized_audio_path = os.path.splitext(video_path)[0] + "_diarized.wav"
+        try:
+            extract_audio(video_path, audio_path)
+            if prompt_for_diarization():
+                diarize_audio(audio_path, diarized_audio_path)
+                messagebox.showinfo("Success", f"Diarized audio saved as {diarized_audio_path}")
+            else:
+                logging.info("Diarization cancelled by user")
+                messagebox.showinfo("Cancelled", "Diarization cancelled")
+        except Exception as e:
+            logging.error(f"Error: {e}")
+            error_logger.error(f"Error: {e}")
+            messagebox.showerror("Error", str(e))
+            sys.exit(1)
+        root.destroy()
+        logging.info("Main function completed")
 
 if __name__ == "__main__":
     main()
