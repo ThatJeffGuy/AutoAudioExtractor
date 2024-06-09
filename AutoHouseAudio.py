@@ -62,25 +62,6 @@ def install_urllib3():
     logging.info(f"Installing urllib3=={urllib3_version} from the web")
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', f'urllib3=={urllib3_version}'])
 
-def install_torch_packages():
-    torch_packages = [
-        ('torch', '2.0.1+cu117'),
-        ('torchaudio', '2.0.1+cu117'),
-        ('torchvision', '0.15.2+cu117'),
-    ]
-
-    for package_name, package_version in torch_packages:
-        try:
-            installed_version = subprocess.check_output([sys.executable, '-m', 'pip', 'show', package_name]).decode()
-            if package_version in installed_version:
-                logging.info(f"{package_name}=={package_version} is already installed")
-                continue
-        except subprocess.CalledProcessError:
-            pass
-
-        logging.info(f"Installing {package_name}=={package_version}")
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', f'{package_name}=={package_version}', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
-
 def install_other_packages():
     packages = [
         'pydub',
@@ -94,6 +75,17 @@ def install_other_packages():
             subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
         else:
             logging.info(f"{package} is already installed")
+
+def install_torch_packages():
+    torch_packages = [
+        ('torch', '2.0.1+cu117'),
+        ('torchaudio', '2.0.1+cu117'),
+        ('torchvision', '0.15.2+cu117'),
+    ]
+
+    for package_name, package_version in torch_packages:
+        logging.info(f"Force installing {package_name}=={package_version}")
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', f'{package_name}=={package_version}', '--force-reinstall', '--extra-index-url', 'https://download.pytorch.org/whl/cu117'])
 
 def check_cuda():
     try:
@@ -121,7 +113,7 @@ def check_cuda():
 
 def extract_audio(video_path, audio_path):
     logging.info(f"Extracting English audio from {video_path}")
-    command = ['ffmpeg', '-i', video_path, '-q:a', '0', '-map', 'a', audio_path]
+    command = ['ffmpeg', '-i', video_path, '-map', '0:2', '-q:a', '0', audio_path]
     subprocess.run(command, check=True)
     logging.info(f"Audio extraction completed: {audio_path}")
 
@@ -163,8 +155,8 @@ def main():
     create_and_activate_venv()
     if os.getenv("IN_VENV") == "1":
         install_urllib3()
-        install_torch_packages()
         install_other_packages()
+        install_torch_packages()
         check_cuda()
         root = tk.Tk()
         root.withdraw()
