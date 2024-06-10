@@ -3,7 +3,7 @@ pyannote.core==5.0.0
 pyannote.database==5.1.0
 pyannote.metrics==3.2.1
 pyannote.pipeline==3.0.1
-torch==2.0.1+cu118
-torchaudio==2.0.1+cu118
+torch==2.2.0+cu118
+torchaudio==2.2.0+cu118
 speechbrain
 soundfile

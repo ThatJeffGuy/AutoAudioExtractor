@@ -5,24 +5,6 @@ import tkinter as tk
 from tkinter import filedialog
 import wave
 
-def create_and_activate_venv(venv_path):
-    # Create virtual environment if it does not exist
-    if not os.path.exists(venv_path):
-        try:
-            subprocess.check_call([sys.executable, "-m", "venv", venv_path])
-        except subprocess.CalledProcessError as e:
-            print(f"Failed to create virtual environment. Error: {e}")
-            sys.exit(1)
-    
-    # Activate virtual environment
-    activate_script = os.path.join(venv_path, 'Scripts', 'activate_this.py')
-    try:
-        with open(activate_script) as f:
-            exec(f.read(), {'__file__': activate_script})
-    except FileNotFoundError as e:
-        print(f"Failed to activate virtual environment. Error: {e}")
-        sys.exit(1)
-
 def extract_audio(video_path, audio_path):
     if os.path.exists(audio_path):
         os.remove(audio_path)
@@ -36,8 +18,22 @@ def convert_audio(audio_path, output_path):
     subprocess.run(command, check=True)
 
 def diarize_audio(audio_path, diarized_audio_path, segments_folder):
-    from pyannote.audio import Pipeline
-    import torch
+    try:
+        from pyannote.audio import Pipeline
+        import torch
+        print("pyannote.audio and torch imported successfully.")
+    except ImportError as e:
+        print(f"Error importing pyannote.audio or torch: {e}")
+        sys.exit(1)
+
+    try:
+        import speechbrain
+        print("speechbrain imported successfully.")
+    except ImportError as e:
+        print("The 'speechbrain' module is required but not installed.")
+        print("Please install it using the command: pip install speechbrain")
+        print(f"Error: {e}")
+        sys.exit(1)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -73,9 +69,6 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
     subprocess.run(command, check=True)
 
 def main():
-    venv_path = os.path.join(os.getcwd(), "ScottishDiarization")
-    create_and_activate_venv(venv_path)
-
     root = tk.Tk()
     root.withdraw()
     root.attributes('-topmost', True)
