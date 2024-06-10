@@ -1,0 +1,11 @@
+pyannote.audio==3.2.0
+pyannote.core==5.0.0
+pyannote.database==5.1.0
+pyannote.metrics==3.2.1
+pyannote.pipeline==3.0.1
+torch==2.3.1+cu121
+~==rch
+~.rch==2.0.0+cu117
+~orch==2.0.0+cu117
+~orch==2.0.1+cu117
+~~rch==2.0.0+cu117
