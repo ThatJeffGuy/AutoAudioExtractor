@@ -6,20 +6,42 @@ import tkinter as tk
 from tkinter import filedialog
 import wave
 
-# Ensure ffmpeg is in PATH
-ffmpeg_path = shutil.which("ffmpeg")
-if not ffmpeg_path:
-    print("ffmpeg is not installed or not in PATH. Please install ffmpeg and try again.")
-    sys.exit(1)
+def create_and_activate_venv(venv_dir="venv"):
+    if not os.path.exists(venv_dir):
+        print("Creating virtual environment...")
+        subprocess.check_call([sys.executable, "-m", "venv", venv_dir])
+    activate_script = os.path.join(venv_dir, "Scripts", "Activate.ps1")
+    if not os.path.exists(activate_script):
+        print(f"Activation script not found: {activate_script}")
+        sys.exit(1)
+    print("Activating virtual environment...")
+    activate_command = f"& {activate_script}"
+    os.system(activate_command)
 
 def install_package(package_name, version=None):
     try:
-        __import__(package_name)
-    except ImportError:
         if version:
             subprocess.check_call([sys.executable, "-m", "pip", "install", f"{package_name}=={version}"])
         else:
             subprocess.check_call([sys.executable, "-m", "pip", "install", package_name])
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to install {package_name}. Error: {e}")
+        sys.exit(1)
+
+def check_and_install_package(package_name, version=None):
+    try:
+        pkg = __import__(package_name)
+        if version and pkg.__version__ != version:
+            install_package(package_name, version)
+    except ImportError:
+        install_package(package_name, version)
+
+def ensure_dependencies():
+    install_package('torch', '2.0.1')
+    install_package('torchvision')
+    install_package('pyannote.audio', '2.1.1')
+    install_package('speechbrain')
+    install_package('soundfile')
 
 def extract_audio(video_path, audio_path):
     if os.path.exists(audio_path):
@@ -34,13 +56,16 @@ def convert_audio(audio_path, output_path):
     subprocess.run(command, check=True)
 
 def diarize_audio(audio_path, diarized_audio_path, segments_folder):
-    install_package('soundfile')
-    install_package('torch', '2.3.1')
-    install_package('torchvision', '0.15.2')
-    install_package('pyannote.audio')
+    check_and_install_package('soundfile')
+    check_and_install_package('torch', '2.0.1')
+    check_and_install_package('pyannote.audio', '2.1.1')
+    check_and_install_package('speechbrain')
     from pyannote.audio import Pipeline
 
-    pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization", use_auth_token="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")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+
+    pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization", use_auth_token="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", device=device)
 
     diarization = pipeline(audio_path)
     
@@ -68,6 +93,12 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
     subprocess.run(command, check=True)
 
 def main():
+    # Create and activate virtual environment
+    create_and_activate_venv()
+
+    # Ensure all required dependencies are installed
+    ensure_dependencies()
+
     root = tk.Tk()
     root.withdraw()
     root.attributes('-topmost', True)
