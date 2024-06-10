@@ -5,6 +5,7 @@ import shutil
 import tkinter as tk
 from tkinter import filedialog
 import wave
+import pkg_resources
 
 def install_package(package_name, version=None, extra_index_url=None):
     try:
@@ -19,9 +20,18 @@ def install_package(package_name, version=None, extra_index_url=None):
         print(f"Failed to install {package_name}. Error: {e}")
         sys.exit(1)
 
+def is_package_installed(package_name):
+    try:
+        pkg_resources.get_distribution(package_name)
+        return True
+    except pkg_resources.DistributionNotFound:
+        return False
+
 def ensure_dependencies():
-    install_package('torch', '2.0.1+cu118', 'https://download.pytorch.org/whl/torch_stable.html')
-    install_package('torchaudio', '2.0.1+cu118', 'https://download.pytorch.org/whl/torch_stable.html')
+    if not is_package_installed('torch'):
+        install_package('torch', '2.0.1+cu118', 'https://download.pytorch.org/whl/torch_stable.html')
+    if not is_package_installed('torchaudio'):
+        install_package('torchaudio', '2.0.1+cu118', 'https://download.pytorch.org/whl/torch_stable.html')
     install_package('pyannote.audio')
     install_package('speechbrain')
     install_package('soundfile')
@@ -44,8 +54,11 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+    if device.type == 'cuda':
+        print(f"CUDA Device Name: {torch.cuda.get_device_name(0)}")
 
-    pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization", use_auth_token="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", device=device)
+    pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization", use_auth_token="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")
+    pipeline.to(device)
 
     diarization = pipeline(audio_path)
     
@@ -73,7 +86,6 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
     subprocess.run(command, check=True)
 
 def main():
-    # Ensure all required dependencies are installed
     ensure_dependencies()
 
     root = tk.Tk()
