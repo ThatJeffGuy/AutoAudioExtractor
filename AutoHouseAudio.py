@@ -7,6 +7,24 @@ from tkinter import filedialog
 import wave
 import pkg_resources
 
+def create_and_activate_venv(venv_path):
+    # Create virtual environment if it does not exist
+    if not os.path.exists(venv_path):
+        try:
+            subprocess.check_call([sys.executable, "-m", "venv", venv_path])
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to create virtual environment. Error: {e}")
+            sys.exit(1)
+    
+    # Activate virtual environment
+    activate_script = os.path.join(venv_path, 'Scripts', 'activate_this.py') if os.name == 'nt' else os.path.join(venv_path, 'bin', 'activate_this.py')
+    try:
+        with open(activate_script) as f:
+            exec(f.read(), {'__file__': activate_script})
+    except FileNotFoundError as e:
+        print(f"Failed to activate virtual environment. Error: {e}")
+        sys.exit(1)
+
 def install_package(package_name, version=None, extra_index_url=None):
     try:
         if version:
@@ -20,21 +38,26 @@ def install_package(package_name, version=None, extra_index_url=None):
         print(f"Failed to install {package_name}. Error: {e}")
         sys.exit(1)
 
-def is_package_installed(package_name):
+def is_package_installed(package_name, version=None):
     try:
-        pkg_resources.get_distribution(package_name)
+        pkg = pkg_resources.get_distribution(package_name)
+        if version and pkg.version != version:
+            return False
         return True
     except pkg_resources.DistributionNotFound:
         return False
 
 def ensure_dependencies():
-    if not is_package_installed('torch'):
+    if not is_package_installed('torch', '2.0.1+cu118'):
         install_package('torch', '2.0.1+cu118', 'https://download.pytorch.org/whl/torch_stable.html')
-    if not is_package_installed('torchaudio'):
+    if not is_package_installed('torchaudio', '2.0.1+cu118'):
         install_package('torchaudio', '2.0.1+cu118', 'https://download.pytorch.org/whl/torch_stable.html')
-    install_package('pyannote.audio')
-    install_package('speechbrain')
-    install_package('soundfile')
+    if not is_package_installed('pyannote.audio'):
+        install_package('pyannote.audio')
+    if not is_package_installed('speechbrain'):
+        install_package('speechbrain')
+    if not is_package_installed('soundfile'):
+        install_package('soundfile')
 
 def extract_audio(video_path, audio_path):
     if os.path.exists(audio_path):
@@ -86,6 +109,8 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
     subprocess.run(command, check=True)
 
 def main():
+    venv_path = os.path.join(os.getcwd(), "ScottishDiarization")
+    create_and_activate_venv(venv_path)
     ensure_dependencies()
 
     root = tk.Tk()
