@@ -21,7 +21,6 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
     try:
         from pyannote.audio import Pipeline
         import torch
-        import torchvision
         import torchaudio
         from speechbrain.inference import SpeakerRecognition
         print("All required libraries imported successfully.")
@@ -33,14 +32,14 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
     print(f"Using device: {device}")
 
     try:
-        # Initialize the SpeechBrain model
-        verification = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="pretrained_models/spkrec-ecapa-voxceleb")
+        # Initialize the SpeechBrain model with VoxCeleb2
+        verification = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="pretrained_models/spkrec-ecapa-voxceleb", run_opts={"device": "cpu"})
         signal, fs = torchaudio.load(audio_path, backend='sox_io')  # Specify backend if needed
         embeddings = verification.encode_batch(signal)
         print("SpeechBrain model initialized and embeddings extracted successfully.")
 
-        # Initialize the pyannote pipeline
-        pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization", use_auth_token="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")
+        # Initialize the pyannote pipeline with Hugging Face token
+        pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization", use_auth_token="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")
         pipeline.to(device)
     except Exception as e:
         print(f"Error loading the pyannote.audio pipeline: {e}")

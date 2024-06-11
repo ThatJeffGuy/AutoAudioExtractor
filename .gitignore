@@ -20,17 +20,11 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
-# Virtual environments
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-ScottishDiarization/
+MANIFEST
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -52,6 +46,7 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
+*.py,cover
 .hypothesis/
 .pytest_cache/
 
@@ -73,6 +68,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docsrc/_build/
 
 # PyBuilder
 target/
@@ -84,21 +80,39 @@ target/
 profile_default/
 ipython_config.py
 
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow
-__pypackages__/
-
 # pyenv
-.python-version
+#   For a library or package, you might want to ignore these files since the code is intended to run in multiple environments; otherwise, check them in:
+# .python-version
 
 # celery beat schedule file
 celerybeat-schedule.*
+
+# SageMath parsed files
+*.sage.py
 
 # dotenv
 .env
 .env.*
 
-# pyright
-typings/
+# virtualenv
+#   Ideally, virtualenv would be established via a command line tool to ensure consistency across platforms and development environments.
+.venv/
+venv/
+ENV/
+env/
+.env
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
 
 # mypy
 .mypy_cache/
@@ -108,5 +122,13 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Generated audio segments directory
-segments/
+# End of https://www.toptal.com/developers/gitignore/api/python
+
+# Include pretrained_models directory
+pretrained_models/
+
+# Include ScottishDiarization directory
+ScottishDiarization/
+
+# Ignore download-pretrained.py file
+download-pretrained.py

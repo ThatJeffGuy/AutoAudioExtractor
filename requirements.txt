@@ -1,8 +1,7 @@
 ffmpeg-python
-pyannote.audio
 torch
-torchvision
 torchaudio
-git+https://github.com/speechbrain/speechbrain.git@develop
+pyannote.audio
+speechbrain
 tk
 wave
