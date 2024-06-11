@@ -2,6 +2,8 @@ torch
 torchaudio
 torchvision
 pyannote.audio
-speechbrain
+SpeechBrain
 ffmpeg-python
 tk
+numpy
+wave
