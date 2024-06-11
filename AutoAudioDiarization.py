@@ -4,9 +4,9 @@ import subprocess
 import tkinter as tk
 from tkinter import filedialog
 import wave
-from pathlib import Path
 from huggingface_hub import snapshot_download
 import shutil
+from pathlib import Path
 
 def extract_audio(video_path, audio_path):
     if os.path.exists(audio_path):
@@ -20,20 +20,22 @@ def convert_audio(audio_path, output_path):
     command = ['ffmpeg', '-i', audio_path, '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', output_path]
     subprocess.run(command, check=True)
 
-def load_model(model_name, local_path, hf_path, use_auth_token=None):
+def ensure_model_exists(local_path, hf_path, use_auth_token=None):
     if not Path(local_path).exists():
-        print(f"{model_name} not found locally. Downloading from Hugging Face...")
+        print(f"{hf_path} not found locally. Downloading from Hugging Face...")
         model_dir = snapshot_download(repo_id=hf_path, use_auth_token=use_auth_token)
+        if os.path.exists(local_path):
+            shutil.rmtree(local_path)
         shutil.copytree(model_dir, local_path)
     else:
-        print(f"{model_name} found locally.")
+        print(f"{hf_path} found locally.")
 
 def diarize_audio(audio_path, diarized_audio_path, segments_folder):
     try:
         from pyannote.audio import Pipeline
         import torch
         import torchaudio
-        from speechbrain.inference import SpeakerRecognition
+        from speechbrain.pretrained import SpeakerRecognition
         print("All required libraries imported successfully.")
     except ImportError as e:
         print(f"Error importing required libraries: {e}")
@@ -43,26 +45,26 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
     print(f"Using device: {device}")
 
     try:
-        # Check and load the SpeechBrain model
-        load_model(
-            "SpeechBrain",
-            local_path="pretrained_models/spkrec-ecapa-voxceleb",
+        # Ensure SpeechBrain model exists locally
+        sb_local_path = "pretrained_models/speechbrain/spkrec-ecapa-voxceleb"
+        ensure_model_exists(
+            local_path=sb_local_path,
             hf_path="speechbrain/spkrec-ecapa-voxceleb",
             use_auth_token="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"
         )
-        verification = SpeakerRecognition.from_hparams(source="pretrained_models/spkrec-ecapa-voxceleb", run_opts={"device": "cpu"})
+        verification = SpeakerRecognition.from_hparams(source=sb_local_path, run_opts={"device": "cpu"})
         signal, fs = torchaudio.load(audio_path, backend='sox_io')
         embeddings = verification.encode_batch(signal)
         print("SpeechBrain model initialized and embeddings extracted successfully.")
 
-        # Check and load the pyannote pipeline
-        load_model(
-            "pyannote",
-            local_path="pretrained_models/pyannote/speaker-diarization",
+        # Ensure pyannote pipeline exists locally
+        pa_local_path = "pretrained_models/pyannote/speaker-diarization"
+        ensure_model_exists(
+            local_path=pa_local_path,
             hf_path="pyannote/speaker-diarization@2.1",
             use_auth_token="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"
         )
-        pipeline = Pipeline.from_pretrained("pretrained_models/pyannote/speaker-diarization", use_auth_token="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")
+        pipeline = Pipeline.from_pretrained(pa_local_path, use_auth_token="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")
         pipeline.to(device)
     except Exception as e:
         print(f"Error loading the models: {e}")
