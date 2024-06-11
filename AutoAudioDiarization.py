@@ -23,25 +23,28 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
         import torch
         import torchvision
         import torchaudio
-        print("pyannote.audio, torch, torchvision, and torchaudio imported successfully.")
+        from speechbrain.inference import SpeakerRecognition
+        print("All required libraries imported successfully.")
     except ImportError as e:
-        print(f"Error importing pyannote.audio, torch, torchvision, or torchaudio: {e}")
-        sys.exit(1)
-
-    try:
-        import speechbrain
-        print("speechbrain imported successfully.")
-    except ImportError as e:
-        print("The 'speechbrain' module is required but not installed.")
-        print("Please install it using the command: pip install speechbrain")
-        print(f"Error: {e}")
+        print(f"Error importing required libraries: {e}")
         sys.exit(1)
 
     device = torch.device("cpu")
     print(f"Using device: {device}")
 
-    pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization", use_auth_token="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")
-    pipeline.to(device)
+    try:
+        # Initialize the SpeechBrain model
+        verification = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="pretrained_models/spkrec-ecapa-voxceleb")
+        signal, fs = torchaudio.load(audio_path, backend='sox_io')  # Specify backend if needed
+        embeddings = verification.encode_batch(signal)
+        print("SpeechBrain model initialized and embeddings extracted successfully.")
+
+        # Initialize the pyannote pipeline
+        pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization", use_auth_token="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")
+        pipeline.to(device)
+    except Exception as e:
+        print(f"Error loading the pyannote.audio pipeline: {e}")
+        sys.exit(1)
 
     diarization = pipeline(audio_path)
     

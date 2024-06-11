@@ -3,5 +3,6 @@ pyannote.audio
 torch
 torchvision
 torchaudio
-speechbrain
+git+https://github.com/speechbrain/speechbrain.git@develop
 tk
+wave
