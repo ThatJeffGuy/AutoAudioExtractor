@@ -66,7 +66,8 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
     try:
         local_paths = [
             os.path.join("pretrained_models", "spkrec-ecapa-voxceleb"),
-            os.path.join("pretrained_models", "speakerrecognition")
+            os.path.join("pretrained_models", "speakerrecognition"),
+            os.path.join("pretrained_models", "customencoderwav2vec2classifier")
         ]
         ensure_model_exists(local_paths)
 
