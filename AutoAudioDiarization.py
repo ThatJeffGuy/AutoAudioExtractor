@@ -89,14 +89,16 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
         classifier_sb = foreign_class(
             source=sb_local_path,
             pymodule_file=os.path.join(sb_local_path, "custom.py"),
-            classname="CustomEncoderWav2vec2Classifier"
+            classname="CustomEncoderWav2vec2Classifier",
+            savedir=sb_local_path  # Ensure the directory is reused
         )
 
         pa_local_path = os.path.join("pretrained_models", "speakerrecognition")
         classifier_pa = foreign_class(
             source=pa_local_path,
             pymodule_file=os.path.join(pa_local_path, "custom.py"),
-            classname="CustomSpeakerRecognition"
+            classname="CustomSpeakerRecognition",
+            savedir=pa_local_path  # Ensure the directory is reused
         )
 
         signal, fs = torchaudio.load(audio_path, backend='sox_io')
