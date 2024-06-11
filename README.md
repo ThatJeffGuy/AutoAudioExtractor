@@ -8,7 +8,7 @@ AutoAudio Diarization is a Python-based tool designed for extracting, converting
 
 There are two branches - one for CPU-ONLY and one for CUDA. Be sure to monitor your checkouts accordingly.
 ```bash
-git checkout cpuonly
+git checkout cpu-only
 git checkout cuda
 ```
 
