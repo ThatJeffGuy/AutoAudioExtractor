@@ -54,7 +54,7 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
         from pyannote.audio import Pipeline
         import torch
         import torchaudio
-        from speechbrain.inference.interfaces import foreign_class
+        from speechbrain.inference.interfaces import foreign_class  # Use this import
         print("All required libraries imported successfully.")
     except ImportError as e:
         print(f"Error importing required libraries: {e}")
@@ -65,9 +65,9 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
 
     try:
         local_paths = [
-            os.path.join("pretrained_models", "spkrec-ecapa-voxceleb"),
-            os.path.join("pretrained_models", "speakerrecognition"),
-            os.path.join("pretrained_models", "customencoderwav2vec2classifier")
+            "pretrained_models/spkrec-ecapa-voxceleb",
+            "pretrained_models/speakerrecognition",
+            "pretrained_models/customencoderwav2vec2classifier"
         ]
         ensure_model_exists(local_paths)
 
@@ -86,20 +86,20 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
             else:
                 print(f"Found hyperparams.yaml in: {local_path}")
 
-        sb_local_path = os.path.join("pretrained_models", "spkrec-ecapa-voxceleb")
+        sb_local_path = "pretrained_models/spkrec-ecapa-voxceleb"
         classifier_sb = foreign_class(
             source=sb_local_path,
             pymodule_file=os.path.join(sb_local_path, "custom.py"),
-            classname="CustomEncoderWav2vec2Classifier",
-            savedir=sb_local_path  # Ensure the directory is reused
+            classname="CustomEncoderWav2Vec2Classifier",
+            savedir=sb_local_path
         )
 
-        pa_local_path = os.path.join("pretrained_models", "speakerrecognition")
+        pa_local_path = "pretrained_models/speakerrecognition"
         classifier_pa = foreign_class(
             source=pa_local_path,
             pymodule_file=os.path.join(pa_local_path, "custom.py"),
             classname="CustomSpeakerRecognition",
-            savedir=pa_local_path  # Ensure the directory is reused
+            savedir=pa_local_path
         )
 
         signal, fs = torchaudio.load(audio_path, backend='sox_io')
@@ -133,40 +133,6 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
 
     command = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', os.path.join(segments_folder, "segments_list.txt"), '-c', 'copy', diarized_audio_path]
     subprocess.run(command, check=True)
-
-def main():
-    root = tk.Tk()
-    root.withdraw()
-    root.attributes('-topmost', True)
-    file_path = filedialog.askopenfilename(title="Select File", filetypes=[("All files", "*.*")])
-    if not file_path:
-        print("No file selected. Exiting...")
-        sys.exit()
-
-    file_dir = os.path.dirname(file_path)
-    segments_folder = os.path.join(file_dir, "segments")
-    os.makedirs(segments_folder, exist_ok=True)
-
-    file_ext = os.path.splitext(file_path)[1].lower()
-    audio_path = os.path.splitext(file_path)[0] + ".wav"
-    diarized_audio_path = os.path.join(segments_folder, os.path.splitext(os.path.basename(file_path))[0] + "_diarized.wav")
-
-    if file_ext in ['.mkv', '.mp4', '.avi', '.mov']:
-        print("Extracting audio from video file...")
-        extract_audio(file_path, audio_path)
-    elif file_ext in ['.wav']:
-        print("Audio file is already in WAV format.")
-        audio_path = file_path
-    elif file_ext in ['.mp3', '.flac', '.ogg']:
-        print("Converting audio file to WAV format...")
-        convert_audio(file_path, audio_path)
-    else:
-        print(f"Unsupported file format: {file_ext}. Exiting...")
-        sys.exit()
-
-    print("Starting diarization...")
-    diarize_audio(audio_path, diarized_audio_path, segments_folder)
-    print(f"Diarized audio saved as {diarized_audio_path}")
 
 if __name__ == "__main__":
     main()

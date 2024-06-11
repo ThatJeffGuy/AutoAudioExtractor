@@ -129,3 +129,6 @@ ScottishDiarization/
 
 # Include Workspace File
 workspace.code-workspace
+
+# Include tests
+speechbrain_test.py

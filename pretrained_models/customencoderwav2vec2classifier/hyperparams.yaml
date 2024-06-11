@@ -1,4 +1,4 @@
-# Example hyperparameters file for CustomEncoderWav2vec2Classifier
+# Example hyperparameters file for CustomEncoderWav2Vec2Classifier
 pretrained_path: 'speechbrain/spkrec-ecapa-voxceleb'
 # Other hyperparameters specific to the model
 sample_rate: 16000
