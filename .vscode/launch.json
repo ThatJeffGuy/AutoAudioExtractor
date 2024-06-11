@@ -3,7 +3,7 @@
     "configurations": [
         {
             "name": "Python: AutoHouseAudio",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/AutoHouseAudio.py",
             "console": "integratedTerminal",

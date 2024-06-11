@@ -21,9 +21,11 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
     try:
         from pyannote.audio import Pipeline
         import torch
-        print("pyannote.audio and torch imported successfully.")
+        import torchvision
+        import torchaudio
+        print("pyannote.audio, torch, torchvision, and torchaudio imported successfully.")
     except ImportError as e:
-        print(f"Error importing pyannote.audio or torch: {e}")
+        print(f"Error importing pyannote.audio, torch, torchvision, or torchaudio: {e}")
         sys.exit(1)
 
     try:
