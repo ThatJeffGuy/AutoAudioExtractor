@@ -1,8 +1,7 @@
-ffmpeg-python
 torch
 torchaudio
 torchvision
 pyannote.audio
 speechbrain
-huggingface_hub
+ffmpeg-python
 tk

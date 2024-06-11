@@ -21,6 +21,20 @@ def ensure_model_exists(local_paths):
             sys.exit(1)
         else:
             print(f"Found expected directory: {local_path}")
+        
+        custom_py_path = os.path.join(local_path, 'custom.py')
+        if not Path(custom_py_path).exists():
+            print(f"Expected custom.py not found in: {local_path}")
+            sys.exit(1)
+        else:
+            print(f"Found custom.py in: {local_path}")
+        
+        hyperparams_path = os.path.join(local_path, 'hyperparams.yaml')
+        if not Path(hyperparams_path).exists():
+            print(f"Expected hyperparams.yaml not found in: {local_path}")
+            sys.exit(1)
+        else:
+            print(f"Found hyperparams.yaml in: {local_path}")
 
 def extract_audio(video_path, audio_path):
     if os.path.exists(audio_path):
@@ -50,14 +64,12 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
     print(f"Using device: {device}")
 
     try:
-        # Ensure the required local directories exist
         local_paths = [
-            "pretrained_models/spkrec-ecapa-voxceleb",
-            "pretrained_models/speakerrecognition"
+            os.path.join("pretrained_models", "spkrec-ecapa-voxceleb"),
+            os.path.join("pretrained_models", "speakerrecognition")
         ]
         ensure_model_exists(local_paths)
 
-        # Check for custom.py file
         for local_path in local_paths:
             custom_py_path = os.path.join(local_path, 'custom.py')
             if not Path(custom_py_path).exists():
@@ -65,17 +77,22 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
                 sys.exit(1)
             else:
                 print(f"Found custom.py in: {local_path}")
+            
+            hyperparams_path = os.path.join(local_path, 'hyperparams.yaml')
+            if not Path(hyperparams_path).exists():
+                print(f"Expected hyperparams.yaml not found in: {local_path}")
+                sys.exit(1)
+            else:
+                print(f"Found hyperparams.yaml in: {local_path}")
 
-        # Initialize the SpeechBrain model using foreign_class
-        sb_local_path = "pretrained_models/spkrec-ecapa-voxceleb"
+        sb_local_path = os.path.join("pretrained_models", "spkrec-ecapa-voxceleb")
         classifier_sb = foreign_class(
             source=sb_local_path,
             pymodule_file=os.path.join(sb_local_path, "custom.py"),
             classname="CustomEncoderWav2vec2Classifier"
         )
 
-        # Initialize the pyannote pipeline using foreign_class
-        pa_local_path = "pretrained_models/speakerrecognition"
+        pa_local_path = os.path.join("pretrained_models", "speakerrecognition")
         classifier_pa = foreign_class(
             source=pa_local_path,
             pymodule_file=os.path.join(pa_local_path, "custom.py"),
@@ -93,11 +110,9 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
 
     diarization = classifier_pa.classify_file(audio_path)
 
-    # Save diarization result to file
     with open(os.path.join(segments_folder, "diarization.rttm"), "w") as f:
         diarization.write_rttm(f)
 
-    # Extract segments and save them as individual files
     segments = []
     with wave.open(audio_path, 'rb') as wf:
         sample_rate = wf.getframerate()

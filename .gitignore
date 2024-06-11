@@ -126,3 +126,6 @@ dmypy.json
 
 # Include ScottishDiarization directory
 ScottishDiarization/
+
+# Include Workspace File
+workspace.code-workspace
