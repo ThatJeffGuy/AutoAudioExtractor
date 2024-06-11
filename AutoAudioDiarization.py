@@ -7,18 +7,10 @@ import wave
 from huggingface_hub import snapshot_download
 import shutil
 from pathlib import Path
-
-def extract_audio(video_path, audio_path):
-    if os.path.exists(audio_path):
-        os.remove(audio_path)
-    command = ['ffmpeg', '-i', video_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', audio_path]
-    subprocess.run(command, check=True)
-
-def convert_audio(audio_path, output_path):
-    if os.path.exists(output_path):
-        os.remove(output_path)
-    command = ['ffmpeg', '-i', audio_path, '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', output_path]
-    subprocess.run(command, check=True)
+from pyannote.audio import Pipeline
+import torch
+import torchaudio
+from speechbrain.inference.interfaces import foreign_class
 
 def ensure_model_exists(local_paths, hf_paths, use_auth_token=None):
     for local_path, hf_path in zip(local_paths, hf_paths):
@@ -36,8 +28,21 @@ def ensure_model_exists(local_paths, hf_paths, use_auth_token=None):
         else:
             print(f"Found expected directory: {local_path}")
 
+def extract_audio(video_path, audio_path):
+    if os.path.exists(audio_path):
+        os.remove(audio_path)
+    command = ['ffmpeg', '-i', video_path, '-vn', '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', audio_path]
+    subprocess.run(command, check=True)
+
+def convert_audio(audio_path, output_path):
+    if os.path.exists(output_path):
+        os.remove(output_path)
+    command = ['ffmpeg', '-i', audio_path, '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', output_path]
+    subprocess.run(command, check=True)
+
 def diarize_audio(audio_path, diarized_audio_path, segments_folder):
     try:
+        print("Importing libraries...")
         from pyannote.audio import Pipeline
         import torch
         import torchaudio
@@ -62,11 +67,25 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
         ]
         ensure_model_exists(local_paths, hf_paths, use_auth_token="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")
 
-        # Initialize the SpeechBrain model
+        # Check for custom.py file
+        for local_path in local_paths:
+            custom_py_path = os.path.join(local_path, 'custom.py')
+            if not Path(custom_py_path).exists():
+                print(f"Expected custom.py not found in: {local_path}")
+                sys.exit(1)
+            else:
+                print(f"Found custom.py in: {local_path}")
+
+        # Initialize the SpeechBrain model using foreign_class
         sb_local_path = "pretrained_models/spkrec-ecapa-voxceleb"
-        verification = SpeakerRecognition.from_hparams(source=sb_local_path, savedir=sb_local_path, run_opts={"device": "cpu"})
+        classifier = foreign_class(
+            source="speechbrain/spkrec-ecapa-voxceleb",
+            pymodule_file=os.path.join(sb_local_path, "custom.py"),
+            classname="CustomEncoderWav2vec2Classifier"
+        )
+
         signal, fs = torchaudio.load(audio_path, backend='sox_io')
-        embeddings = verification.encode_batch(signal)
+        embeddings = classifier.encode_batch(signal)
         print("SpeechBrain model initialized and embeddings extracted successfully.")
 
         # Initialize the pyannote pipeline
