@@ -37,10 +37,8 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
         print(f"Error: {e}")
         sys.exit(1)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cpu")
     print(f"Using device: {device}")
-    if device.type == 'cuda':
-        print(f"CUDA Device Name: {torch.cuda.get_device_name(0)}")
 
     pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization", use_auth_token="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")
     pipeline.to(device)
