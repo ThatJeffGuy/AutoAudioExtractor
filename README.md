@@ -1,8 +1,8 @@
-# AutoHouseAudio
+# AutoAudio Diarization
 
 ## Overview
 
-AutoHouseAudio is a Python-based tool designed for extracting, converting, and performing speaker diarization on audio from various video and audio files. This script utilizes `ffmpeg`, `pyannote.audio`, and `speechbrain` to provide a seamless process for handling audio files and extracting individual speaker segments.
+AutoAudio Diarization is a Python-based tool designed for extracting, converting, and performing speaker diarization on audio from various video and audio files. This script utilizes `ffmpeg`, `pyannote.audio`, and `speechbrain` to provide a seamless process for handling audio files and extracting individual speaker segments.
 
 ## Features
 
@@ -13,12 +13,12 @@ AutoHouseAudio is a Python-based tool designed for extracting, converting, and p
 
 ## Installation
 
-To use AutoHouseAudio, you need to have Python installed along with several dependencies. Follow the steps below to set up your environment:
+To use AutoAudio Diarization, you need to have Python installed along with several dependencies. Follow the steps below to set up your environment:
 
 1. Clone this repository:
     ```bash
-    git clone https://github.com/yourusername/AutoHouseAudio.git
-    cd AutoHouseAudio
+    git clone https://github.com/yourusername/AutoAudioDiarization.git
+    cd AutoAudioDiarization
     ```
 
 2. Install the required packages:
@@ -44,4 +44,4 @@ To use AutoHouseAudio, you need to have Python installed along with several depe
 Run the script using Python:
 
 ```bash
-python AutoHouseAudio.py
+python AutoAudioDiarization.py
