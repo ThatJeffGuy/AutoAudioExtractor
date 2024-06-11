@@ -4,27 +4,21 @@ import subprocess
 import tkinter as tk
 from tkinter import filedialog
 import wave
-from huggingface_hub import snapshot_download
-import shutil
 from pathlib import Path
+import shutil
 from pyannote.audio import Pipeline
 import torch
 import torchaudio
 from speechbrain.inference.interfaces import foreign_class
 
-def ensure_model_exists(local_paths, hf_paths, use_auth_token=None):
-    for local_path, hf_path in zip(local_paths, hf_paths):
+def ensure_model_exists(local_paths):
+    for local_path in local_paths:
         if not Path(local_path).exists():
-            print(f"{local_path} not found locally. Downloading from Hugging Face: {hf_path}")
-            try:
-                model_dir = snapshot_download(repo_id=hf_path, use_auth_token=use_auth_token)
-                if os.path.exists(local_path):
-                    shutil.rmtree(local_path)
-                shutil.copytree(model_dir, local_path)
-                print(f"Downloaded and saved to {local_path}")
-            except Exception as e:
-                print(f"Error downloading {hf_path} from Hugging Face: {e}")
-                sys.exit(1)
+            print(f"Expected directory not found: {local_path}")
+            print("Please ensure the following directories are available locally:")
+            for path in local_paths:
+                print(f"  - {path}")
+            sys.exit(1)
         else:
             print(f"Found expected directory: {local_path}")
 
@@ -46,7 +40,7 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
         from pyannote.audio import Pipeline
         import torch
         import torchaudio
-        from speechbrain.inference import SpeakerRecognition
+        from speechbrain.inference.interfaces import foreign_class
         print("All required libraries imported successfully.")
     except ImportError as e:
         print(f"Error importing required libraries: {e}")
@@ -61,11 +55,7 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
             "pretrained_models/spkrec-ecapa-voxceleb",
             "pretrained_models/speakerrecognition"
         ]
-        hf_paths = [
-            "speechbrain/spkrec-ecapa-voxceleb",
-            "pyannote/speaker-diarization@2.1"
-        ]
-        ensure_model_exists(local_paths, hf_paths, use_auth_token="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")
+        ensure_model_exists(local_paths)
 
         # Check for custom.py file
         for local_path in local_paths:
@@ -78,25 +68,30 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
 
         # Initialize the SpeechBrain model using foreign_class
         sb_local_path = "pretrained_models/spkrec-ecapa-voxceleb"
-        classifier = foreign_class(
-            source="speechbrain/spkrec-ecapa-voxceleb",
+        classifier_sb = foreign_class(
+            source=sb_local_path,
             pymodule_file=os.path.join(sb_local_path, "custom.py"),
             classname="CustomEncoderWav2vec2Classifier"
         )
 
-        signal, fs = torchaudio.load(audio_path, backend='sox_io')
-        embeddings = classifier.encode_batch(signal)
-        print("SpeechBrain model initialized and embeddings extracted successfully.")
-
-        # Initialize the pyannote pipeline
+        # Initialize the pyannote pipeline using foreign_class
         pa_local_path = "pretrained_models/speakerrecognition"
-        pipeline = Pipeline.from_pretrained(pa_local_path, use_auth_token="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")
-        pipeline.to(device)
+        classifier_pa = foreign_class(
+            source=pa_local_path,
+            pymodule_file=os.path.join(pa_local_path, "custom.py"),
+            classname="CustomSpeakerRecognition"
+        )
+
+        signal, fs = torchaudio.load(audio_path, backend='sox_io')
+        embeddings_sb = classifier_sb.encode_batch(signal)
+        embeddings_pa = classifier_pa.encode_batch(signal)
+        print("SpeechBrain and pyannote models initialized and embeddings extracted successfully.")
+
     except Exception as e:
         print(f"Error loading the models: {e}")
         sys.exit(1)
 
-    diarization = pipeline(audio_path)
+    diarization = classifier_pa.classify_file(audio_path)
 
     # Save diarization result to file
     with open(os.path.join(segments_folder, "diarization.rttm"), "w") as f:
