@@ -4,6 +4,9 @@ import subprocess
 import tkinter as tk
 from tkinter import filedialog
 import wave
+from pathlib import Path
+from huggingface_hub import snapshot_download
+import shutil
 
 def extract_audio(video_path, audio_path):
     if os.path.exists(audio_path):
@@ -16,6 +19,14 @@ def convert_audio(audio_path, output_path):
         os.remove(output_path)
     command = ['ffmpeg', '-i', audio_path, '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', output_path]
     subprocess.run(command, check=True)
+
+def load_model(model_name, local_path, hf_path, use_auth_token=None):
+    if not Path(local_path).exists():
+        print(f"{model_name} not found locally. Downloading from Hugging Face...")
+        model_dir = snapshot_download(repo_id=hf_path, use_auth_token=use_auth_token)
+        shutil.copytree(model_dir, local_path)
+    else:
+        print(f"{model_name} found locally.")
 
 def diarize_audio(audio_path, diarized_audio_path, segments_folder):
     try:
@@ -32,21 +43,33 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder):
     print(f"Using device: {device}")
 
     try:
-        # Initialize the SpeechBrain model with VoxCeleb2
-        verification = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="pretrained_models/spkrec-ecapa-voxceleb", run_opts={"device": "cpu"})
-        signal, fs = torchaudio.load(audio_path, backend='sox_io')  # Specify backend if needed
+        # Check and load the SpeechBrain model
+        load_model(
+            "SpeechBrain",
+            local_path="pretrained_models/spkrec-ecapa-voxceleb",
+            hf_path="speechbrain/spkrec-ecapa-voxceleb",
+            use_auth_token="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"
+        )
+        verification = SpeakerRecognition.from_hparams(source="pretrained_models/spkrec-ecapa-voxceleb", run_opts={"device": "cpu"})
+        signal, fs = torchaudio.load(audio_path, backend='sox_io')
         embeddings = verification.encode_batch(signal)
         print("SpeechBrain model initialized and embeddings extracted successfully.")
 
-        # Initialize the pyannote pipeline with Hugging Face token
-        pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization", use_auth_token="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")
+        # Check and load the pyannote pipeline
+        load_model(
+            "pyannote",
+            local_path="pretrained_models/pyannote/speaker-diarization",
+            hf_path="pyannote/speaker-diarization@2.1",
+            use_auth_token="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"
+        )
+        pipeline = Pipeline.from_pretrained("pretrained_models/pyannote/speaker-diarization", use_auth_token="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")
         pipeline.to(device)
     except Exception as e:
-        print(f"Error loading the pyannote.audio pipeline: {e}")
+        print(f"Error loading the models: {e}")
         sys.exit(1)
 
     diarization = pipeline(audio_path)
-    
+
     # Save diarization result to file
     with open(os.path.join(segments_folder, "diarization.rttm"), "w") as f:
         diarization.write_rttm(f)

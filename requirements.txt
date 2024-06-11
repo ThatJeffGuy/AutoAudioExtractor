@@ -3,5 +3,5 @@ torch
 torchaudio
 pyannote.audio
 speechbrain
+huggingface_hub
 tk
-wave
