@@ -6,6 +6,8 @@ AutoAudio Diarization is a Python-based tool designed for extracting, converting
 
 ## CPU and CUDA environments
 
+YOU ARE LOOKING AT THE CUDA ENVIRONMENT RIGHT NOW!
+
 I am splitting this project up into two branches, one that will run entirely on CPU, and one that will have CUDA support.
 
 CUDA is signficantly more complicated and reliant on so many libraries that cross reference specific versions that it becomes a mess to navigate and process correctly or efficiently.
