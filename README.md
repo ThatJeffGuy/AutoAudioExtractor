@@ -4,6 +4,14 @@
 
 AutoAudio Diarization is a Python-based tool designed for extracting, converting, and performing speaker diarization on audio from various video and audio files. This script utilizes `ffmpeg`, `pyannote.audio`, and `speechbrain` to provide a seamless process for handling audio files and extracting individual speaker segments.
 
+## CPU and CUDA environments
+
+I am splitting this project up into two branches, one that will run entirely on CPU, and one that will have CUDA support.
+
+CUDA is signficantly more complicated and reliant on so many libraries that cross reference specific versions that it becomes a mess to navigate and process correctly or efficiently.
+
+CPU branch, while slower, is still very fast, with average of about 90 seconds for 1 hour of processed audio (meaning, cleaned up manually), on an i7 11700k.
+
 ## Features
 
 - Extracts audio from video files in various formats (e.g., mkv, mp4, avi, mov).
@@ -45,3 +53,4 @@ Run the script using Python:
 
 ```bash
 python AutoAudioDiarization.py
+```
