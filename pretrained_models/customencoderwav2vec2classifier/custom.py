@@ -6,7 +6,7 @@ import os
 class CustomEncoderWav2Vec2Classifier:
     def __init__(self, source=None, hparams_file=None, savedir=None, run_opts=None, overrides=None):
         if not source:
-            source = os.path.join(os.getcwd(), "pretrained_models", "customencoderwav2vec2classifier")
+            source = r"D:\Python Programs\AutoAudioExtractor\pretrained_models\customencoderwav2vec2classifier"
         self.classifier = EncoderClassifier.from_hparams(
             source=source, 
             hparams_file=hparams_file, 

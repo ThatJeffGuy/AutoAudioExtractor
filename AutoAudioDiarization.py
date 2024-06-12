@@ -10,7 +10,6 @@ import torchaudio
 from pyannote.audio import Pipeline
 from speechbrain.inference.interfaces import foreign_class
 
-
 def ensure_model_exists(local_paths):
     """
     Ensure that the required model directories and files exist locally.
@@ -41,7 +40,6 @@ def ensure_model_exists(local_paths):
         else:
             print(f"Found hyperparams.yaml in: {hyperparams_path}")
 
-
 def extract_audio(video_path, audio_path):
     """
     Extract audio from a video file using ffmpeg.
@@ -51,7 +49,6 @@ def extract_audio(video_path, audio_path):
     command = ['ffmpeg', '-i', str(video_path), '-vn', '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', str(audio_path)]
     subprocess.run(command, check=True)
 
-
 def convert_audio(audio_path, output_path):
     """
     Convert an audio file to WAV format using ffmpeg.
@@ -60,7 +57,6 @@ def convert_audio(audio_path, output_path):
         output_path.unlink()
     command = ['ffmpeg', '-i', str(audio_path), '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', str(output_path)]
     subprocess.run(command, check=True)
-
 
 def initialize_models(local_paths):
     """
@@ -91,7 +87,6 @@ def initialize_models(local_paths):
         sys.exit(1)
 
     return classifier_sb, classifier_pa
-
 
 def diarize_audio(audio_path, diarized_audio_path, segments_folder, classifier_sb, classifier_pa):
     """
@@ -128,7 +123,6 @@ def diarize_audio(audio_path, diarized_audio_path, segments_folder, classifier_s
     command = ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', str(segments_list_path), '-c', 'copy', str(diarized_audio_path)]
     subprocess.run(command, check=True)
 
-
 def main():
     """
     Main function to run the audio diarization pipeline.
@@ -162,10 +156,11 @@ def main():
         print(f"Unsupported file format: {file_ext}. Exiting...")
         sys.exit()
 
+    # Specify the absolute paths to the model directories
     local_paths = [
-        "pretrained_models/spkrec-ecapa-voxceleb",
-        "pretrained_models/speakerrecognition",
-        "pretrained_models/customencoderwav2vec2classifier"
+        r"D:\Python Programs\AutoAudioExtractor\pretrained_models\spkrec-ecapa-voxceleb",
+        r"D:\Python Programs\AutoAudioExtractor\pretrained_models\speakerrecognition",
+        r"D:\Python Programs\AutoAudioExtractor\pretrained_models\customencoderwav2vec2classifier"
     ]
 
     try:
@@ -177,7 +172,6 @@ def main():
     print("Starting diarization...")
     diarize_audio(audio_path, diarized_audio_path, segments_folder, classifier_sb, classifier_pa)
     print(f"Diarized audio saved as {diarized_audio_path}")
-
 
 if __name__ == "__main__":
     main()
