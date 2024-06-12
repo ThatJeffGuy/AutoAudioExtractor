@@ -6,7 +6,7 @@
 n_mels: 80
 
 # Pretrain folder (HuggingFace)
-pretrained_path: ../spkrec-ecapa-voxceleb
+pretrained_path: D:/python programs/autoautoextractor/pretrained_models/spkrec-ecapa-voxceleb
 
 # Output parameters
 out_n_neurons: 7205

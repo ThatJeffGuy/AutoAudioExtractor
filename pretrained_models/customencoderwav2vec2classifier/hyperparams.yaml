@@ -1,5 +1,5 @@
 # Example hyperparameters file for CustomEncoderWav2Vec2Classifier
-pretrained_path: 'speechbrain/spkrec-ecapa-voxceleb'
+pretrained_path: 'D:/python programs/autoautoextractor/pretrained_models/speechbrain/spkrec-ecapa-voxceleb'
 # Other hyperparameters specific to the model
 sample_rate: 16000
 embedding_dim: 256

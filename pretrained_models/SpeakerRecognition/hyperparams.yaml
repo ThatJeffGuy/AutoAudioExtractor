@@ -9,15 +9,15 @@
 # Basic parameters
 seed: 1986
 __set_seed: !apply:torch.manual_seed [1986]
-output_folder: results/ecapa_augment/1986
-save_folder: results/ecapa_augment/1986/save
-train_log: results/ecapa_augment/1986/train_log.txt
+output_folder: D:/python programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986
+save_folder: D:/python programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/save
+train_log: D:/python programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/train_log.txt
 
 # Data files
-data_folder: /localscratch/voxceleb1/
+data_folder: D:/python programs/autoautoextractor/pretrained_models/voxceleb1/
                            # e.g. /path/to/Voxceleb
-train_annotation: results/ecapa_augment/1986/save/train.csv
-valid_annotation: results/ecapa_augment/1986/save/dev.csv
+train_annotation: D:/python programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/save/train.csv
+valid_annotation: D:/python programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/save/dev.csv
 
 # Use the following links for the official voxceleb splits:
 # VoxCeleb1 (cleaned): https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/veri_test2.txt
@@ -63,32 +63,30 @@ compute_features: &id006 !new:speechbrain.lobes.features.Fbank
   right_frames: 0
   deltas: false
 
-embedding_model: &id007 !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
+embeddings_model: &id007 !new:speechbrain.lobes.models.ECAPA_TDNN.ECAPA_TDNN
   input_size: 80
-  channels: [1024, 1024, 1024, 1024, 3072]
-  kernel_sizes: [5, 3, 3, 3, 1]
-  dilations: [1, 2, 3, 4, 1]
-  attention_channels: 128
   lin_neurons: 192
 
-classifier: &id008 !new:speechbrain.lobes.models.ECAPA_TDNN.Classifier
-  input_size: 192
-  out_neurons: 7205
+classifier: &id008 !new:speechbrain.lobes.models.classifiers.Linear
+  input_shape: [null, 192]
+  num_classes: 7205
 
-epoch_counter: &id010 !new:speechbrain.utils.epoch_loop.EpochCounter
-  limit: 15
+mean_var_norm: &id009 !new:speechbrain.processing.features.InputNormalization
+  norm_type: sentence
+  std_norm: false
 
-
+# Augmentation pipeline
 augment_wavedrop: &id001 !new:speechbrain.lobes.augment.TimeDomainSpecAugment
-  sample_rate: 16000
-  speeds: [100]
+  prob: 0.5
+  aug_start: 0.2
+  aug_end: 0.5
 
-augment_speed: &id002 !new:speechbrain.lobes.augment.TimeDomainSpecAugment
-  sample_rate: 16000
+augment_speed: &id002 !new:speechbrain.lobes.augment.SpeedPerturb
+  orig_freq: 16000
   speeds: [95, 100, 105]
 
 add_rev: &id003 !new:speechbrain.lobes.augment.EnvCorrupt
-  openrir_folder: /localscratch/voxceleb1/
+  openrir_folder: D:/python programs/autoautoextractor/pretrained_models/voxceleb1/
   openrir_max_noise_len: 3.0    # seconds
   reverb_prob: 1.0
   noise_prob: 0.0
@@ -97,7 +95,7 @@ add_rev: &id003 !new:speechbrain.lobes.augment.EnvCorrupt
   rir_scale_factor: 1.0
 
 add_noise: &id004 !new:speechbrain.lobes.augment.EnvCorrupt
-  openrir_folder: /localscratch/voxceleb1/
+  openrir_folder: D:/python programs/autoautoextractor/pretrained_models/voxceleb1/
   openrir_max_noise_len: 3.0    # seconds
   reverb_prob: 0.0
   noise_prob: 1.0
@@ -106,7 +104,7 @@ add_noise: &id004 !new:speechbrain.lobes.augment.EnvCorrupt
   rir_scale_factor: 1.0
 
 add_rev_noise: &id005 !new:speechbrain.lobes.augment.EnvCorrupt
-  openrir_folder: /localscratch/voxceleb1/
+  openrir_folder: D:/python programs/autoautoextractor/pretrained_models/voxceleb1/
   openrir_max_noise_len: 3.0    # seconds
   reverb_prob: 1.0
   noise_prob: 1.0
@@ -114,19 +112,8 @@ add_rev_noise: &id005 !new:speechbrain.lobes.augment.EnvCorrupt
   noise_snr_high: 15
   rir_scale_factor: 1.0
 
-
-# Definition of the augmentation pipeline.
-# If concat_augment = False, the augmentation techniques are applied
-# in sequence. If concat_augment = True, all the augmented signals
-# # are concatenated in a single big batch.
-
 augment_pipeline: [*id001, *id002, *id003, *id004, *id005]
 concat_augment: true
-
-mean_var_norm: &id009 !new:speechbrain.processing.features.InputNormalization
-
-  norm_type: sentence
-  std_norm: false
 
 modules:
   compute_features: *id006
@@ -156,14 +143,14 @@ lr_annealing: !new:speechbrain.nnet.schedulers.CyclicLRScheduler
 
 # Logging + checkpoints
 train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
-  save_file: results/ecapa_augment/1986/train_log.txt
+  save_file: D:/python programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/train_log.txt
 
 error_stats: !name:speechbrain.utils.metric_stats.MetricStats
   metric: !name:speechbrain.nnet.losses.classification_error
     reduction: batch
 
 checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
-  checkpoints_dir: results/ecapa_augment/1986/save
+  checkpoints_dir: D:/python programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/save
   recoverables:
     embedding_model: *id007
     classifier: *id008
