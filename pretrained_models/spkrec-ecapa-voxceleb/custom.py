@@ -6,7 +6,7 @@ import os
 class CustomEncoderWav2vec2Classifier:
     def __init__(self, source=None, hparams_file=None, savedir=None, run_opts=None, overrides=None):
         if not source:
-            source = r"D:\Python Programs\AutoAudioExtractor\pretrained_models\spkrec-ecapa-voxceleb"
+            source = os.environ['SPKREC_ECAPA_VOXCELEB']
         self.classifier = EncoderClassifier.from_hparams(source=source, hparams_file=hparams_file, savedir=savedir, run_opts=run_opts, overrides=overrides)
     
     def encode_batch(self, wavs):

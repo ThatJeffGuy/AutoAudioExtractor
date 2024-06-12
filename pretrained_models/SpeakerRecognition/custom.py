@@ -7,7 +7,7 @@ import os
 class CustomSpeakerRecognition:
     def __init__(self, source=None, hparams_file=None, savedir=None, run_opts=None, overrides=None):
         if not source:
-            source = r"D:\Python Programs\AutoAudioExtractor\pretrained_models\speakerrecognition"
+            source = os.environ['SPEAKER_RECOGNITION']
         self.model = Model.from_pretrained(source)
         self.pipeline = SpeakerDiarization(segmentation=self.model)
     

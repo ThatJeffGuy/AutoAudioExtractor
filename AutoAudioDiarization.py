@@ -156,11 +156,11 @@ def main():
         print(f"Unsupported file format: {file_ext}. Exiting...")
         sys.exit()
 
-    # Specify the absolute paths to the model directories
+    # Use environment variables for the model directories
     local_paths = [
-        r"D:\Python Programs\AutoAudioExtractor\pretrained_models\spkrec-ecapa-voxceleb",
-        r"D:\Python Programs\AutoAudioExtractor\pretrained_models\speakerrecognition",
-        r"D:\Python Programs\AutoAudioExtractor\pretrained_models\customencoderwav2vec2classifier"
+        os.environ['SPKREC_ECAPA_VOXCELEB'],
+        os.environ['SPEAKER_RECOGNITION'],
+        os.environ['CUSTOM_ENCODER_WAV2VEC2_CLASSIFIER']
     ]
 
     try:
