@@ -8,11 +8,11 @@ from pathlib import Path
 import torch
 import torchaudio
 from pyannote.audio import Pipeline
-from speechbrain.inference.interfaces import foreign_class
+from speechbrain.pretrained import EncoderClassifier
 
 # Set the environment variables for model paths
+os.environ['PYANNOTE_SPEAKER_DIARIZATION'] = r"D:\Python Programs\AutoAudioExtractor\pretrained_models\pyannote-speaker-diarization"
 os.environ['SPKREC_ECAPA_VOXCELEB'] = r"D:\Python Programs\AutoAudioExtractor\pretrained_models\spkrec-ecapa-voxceleb"
-os.environ['SPEAKER_RECOGNITION'] = r"D:\Python Programs\AutoAudioExtractor\pretrained_models\speakerrecognition"
 os.environ['CUSTOM_ENCODER_WAV2VEC2_CLASSIFIER'] = r"D:\Python Programs\AutoAudioExtractor\pretrained_models\customencoderwav2vec2classifier"
 
 def ensure_model_exists(local_paths):
@@ -63,46 +63,36 @@ def convert_audio(audio_path, output_path):
     command = ['ffmpeg', '-i', str(audio_path), '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', str(output_path)]
     subprocess.run(command, check=True)
 
-def initialize_models(local_paths):
+def initialize_models():
     """
     Initialize the SpeechBrain and pyannote models.
     """
-    ensure_model_exists(local_paths)
-
     try:
         # Initialize the SpeechBrain model directly
-        sb_local_path = Path(local_paths[0]).resolve()
-        classifier_sb = foreign_class(
-            source=sb_local_path.as_posix(),
-            pymodule_file="custom.py",
-            classname="CustomEncoderWav2Vec2Classifier",
-            savedir=sb_local_path.as_posix()
+        sb_local_path = os.environ['SPKREC_ECAPA_VOXCELEB']
+        classifier_sb = EncoderClassifier.from_hparams(
+            source=sb_local_path,
+            savedir=sb_local_path
         )
 
-        # Initialize the pyannote model directly
-        pa_local_path = Path(local_paths[1]).resolve()
-        classifier_pa = foreign_class(
-            source=pa_local_path.as_posix(),
-            pymodule_file="custom.py",
-            classname="CustomSpeakerRecognition",
-            savedir=pa_local_path.as_posix()
-        )
+        # Initialize the pyannote pipeline
+        pa_local_path = os.environ['PYANNOTE_SPEAKER_DIARIZATION']
+        pipeline = Pipeline.from_pretrained(pa_local_path)
     except Exception as e:
         print(f"Error initializing models: {e}")
         sys.exit(1)
 
-    return classifier_sb, classifier_pa
+    return classifier_sb, pipeline
 
-def diarize_audio(audio_path, diarized_audio_path, segments_folder, classifier_sb, classifier_pa):
+def diarize_audio(audio_path, diarized_audio_path, segments_folder, classifier_sb, pipeline):
     """
     Perform audio diarization and save the diarized segments.
     """
     signal, fs = torchaudio.load(str(audio_path), backend='sox_io')
     embeddings_sb = classifier_sb.encode_batch(signal)
-    embeddings_pa = classifier_pa.encode_batch(signal)
     print("SpeechBrain and pyannote models initialized and embeddings extracted successfully.")
 
-    diarization = classifier_pa.classify_file(str(audio_path))
+    diarization = pipeline({'uri': audio_path, 'audio': audio_path})
 
     rttm_path = segments_folder / "diarization.rttm"
     with open(rttm_path, "w") as f:
@@ -161,21 +151,14 @@ def main():
         print(f"Unsupported file format: {file_ext}. Exiting...")
         sys.exit()
 
-    # Use environment variables for the model directories
-    local_paths = [
-        os.environ['SPKREC_ECAPA_VOXCELEB'],
-        os.environ['SPEAKER_RECOGNITION'],
-        os.environ['CUSTOM_ENCODER_WAV2VEC2_CLASSIFIER']
-    ]
-
     try:
-        classifier_sb, classifier_pa = initialize_models(local_paths)
+        classifier_sb, pipeline = initialize_models()
     except Exception as e:
         print(f"Error initializing models: {e}")
         sys.exit(1)
 
     print("Starting diarization...")
-    diarize_audio(audio_path, diarized_audio_path, segments_folder, classifier_sb, classifier_pa)
+    diarize_audio(audio_path, diarized_audio_path, segments_folder, classifier_sb, pipeline)
     print(f"Diarized audio saved as {diarized_audio_path}")
 
 if __name__ == "__main__":
