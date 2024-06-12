@@ -12,16 +12,17 @@ from speechbrain.inference import EncoderClassifier
 
 # Set the environment variables for model paths
 os.environ['PYANNOTE_SPEAKER_DIARIZATION'] = "pyannote/speaker-diarization"
-os.environ['SPKREC_ECAPA_VOXCELEB'] = "D:/python programs/autoautoextractor/pretrained_models/spkrec-ecapa-voxceleb"
+os.environ['SPKREC_ECAPA_VOXCELEB'] = "D:/python_programs/autoautoextractor/pretrained_models/spkrec-ecapa-voxceleb"
 
 class CustomEncoderWav2vec2Classifier:
-    def __init__(self, source="D:/python programs/autoautoextractor/pretrained_models/spkrec-ecapa-voxceleb", hparams_file="D:/python programs/autoautoextractor/pretrained_models/hyperparams.yaml", savedir=None, run_opts=None, overrides=None):
+    def __init__(self, source=None, hparams_file="D:/python_programs/autoautoextractor/pretrained_models/hyperparams.yaml", savedir=None, run_opts=None, overrides=None):
         self.classifier = EncoderClassifier.from_hparams(
-            source=source,
+            source=source or "D:/python_programs/autoautoextractor/pretrained_models/spkrec-ecapa-voxceleb",
             hparams_file=hparams_file,
             savedir=savedir,
             run_opts=run_opts,
-            overrides=overrides
+            overrides=overrides,
+            local_files_only=True  # Ensure loading from local files only
         )
     
     def encode_batch(self, wavs):
@@ -91,8 +92,8 @@ def initialize_models():
     try:
         # Initialize the SpeechBrain model directly
         classifier_sb = CustomEncoderWav2vec2Classifier(
-            source=os.environ['SPKREC_ECAPA_VOXCELEB'],
-            savedir="D:/python programs/autoautoextractor/pretrained_models"
+            hparams_file="D:/python_programs/autoautoextractor/pretrained_models/hyperparams.yaml",
+            savedir="D:/python_programs/autoautoextractor/pretrained_models"
         )
 
         # Initialize the pyannote pipeline

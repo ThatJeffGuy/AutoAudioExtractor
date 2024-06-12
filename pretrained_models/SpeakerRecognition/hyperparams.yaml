@@ -9,15 +9,15 @@
 # Basic parameters
 seed: 1986
 __set_seed: !apply:torch.manual_seed [1986]
-output_folder: D:/python programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986
-save_folder: D:/python programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/save
-train_log: D:/python programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/train_log.txt
+output_folder: D:/python_programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986
+save_folder: D:/python_programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/save
+train_log: D:/python_programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/train_log.txt
 
 # Data files
-data_folder: D:/python programs/autoautoextractor/pretrained_models/voxceleb1/
+data_folder: D:/python_programs/autoautoextractor/pretrained_models/voxceleb1/
                            # e.g. /path/to/Voxceleb
-train_annotation: D:/python programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/save/train.csv
-valid_annotation: D:/python programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/save/dev.csv
+train_annotation: D:/python_programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/save/train.csv
+valid_annotation: D:/python_programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/save/dev.csv
 
 # Use the following links for the official voxceleb splits:
 # VoxCeleb1 (cleaned): https://www.robots.ox.ac.uk/~vgg/data/voxceleb/meta/veri_test2.txt
@@ -86,7 +86,7 @@ augment_speed: &id002 !new:speechbrain.lobes.augment.SpeedPerturb
   speeds: [95, 100, 105]
 
 add_rev: &id003 !new:speechbrain.lobes.augment.EnvCorrupt
-  openrir_folder: D:/python programs/autoautoextractor/pretrained_models/voxceleb1/
+  openrir_folder: D:/python_programs/autoautoextractor/pretrained_models/voxceleb1/
   openrir_max_noise_len: 3.0    # seconds
   reverb_prob: 1.0
   noise_prob: 0.0
@@ -95,7 +95,7 @@ add_rev: &id003 !new:speechbrain.lobes.augment.EnvCorrupt
   rir_scale_factor: 1.0
 
 add_noise: &id004 !new:speechbrain.lobes.augment.EnvCorrupt
-  openrir_folder: D:/python programs/autoautoextractor/pretrained_models/voxceleb1/
+  openrir_folder: D:/python_programs/autoautoextractor/pretrained_models/voxceleb1/
   openrir_max_noise_len: 3.0    # seconds
   reverb_prob: 0.0
   noise_prob: 1.0
@@ -104,7 +104,7 @@ add_noise: &id004 !new:speechbrain.lobes.augment.EnvCorrupt
   rir_scale_factor: 1.0
 
 add_rev_noise: &id005 !new:speechbrain.lobes.augment.EnvCorrupt
-  openrir_folder: D:/python programs/autoautoextractor/pretrained_models/voxceleb1/
+  openrir_folder: D:/python_programs/autoautoextractor/pretrained_models/voxceleb1/
   openrir_max_noise_len: 3.0    # seconds
   reverb_prob: 1.0
   noise_prob: 1.0
@@ -143,14 +143,14 @@ lr_annealing: !new:speechbrain.nnet.schedulers.CyclicLRScheduler
 
 # Logging + checkpoints
 train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
-  save_file: D:/python programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/train_log.txt
+  save_file: D:/python_programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/train_log.txt
 
 error_stats: !name:speechbrain.utils.metric_stats.MetricStats
   metric: !name:speechbrain.nnet.losses.classification_error
     reduction: batch
 
 checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
-  checkpoints_dir: D:/python programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/save
+  checkpoints_dir: D:/python_programs/autoautoextractor/pretrained_models/results/ecapa_augment/1986/save
   recoverables:
     embedding_model: *id007
     classifier: *id008
