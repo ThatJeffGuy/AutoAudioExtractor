@@ -10,6 +10,11 @@ import torchaudio
 from pyannote.audio import Pipeline
 from speechbrain.inference.interfaces import foreign_class
 
+# Set the environment variables for model paths
+os.environ['SPKREC_ECAPA_VOXCELEB'] = r"D:\Python Programs\AutoAudioExtractor\pretrained_models\spkrec-ecapa-voxceleb"
+os.environ['SPEAKER_RECOGNITION'] = r"D:\Python Programs\AutoAudioExtractor\pretrained_models\speakerrecognition"
+os.environ['CUSTOM_ENCODER_WAV2VEC2_CLASSIFIER'] = r"D:\Python Programs\AutoAudioExtractor\pretrained_models\customencoderwav2vec2classifier"
+
 def ensure_model_exists(local_paths):
     """
     Ensure that the required model directories and files exist locally.
