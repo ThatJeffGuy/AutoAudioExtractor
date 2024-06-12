@@ -68,19 +68,19 @@ def initialize_models(local_paths):
         # Initialize the SpeechBrain model directly
         sb_local_path = Path(local_paths[0]).resolve()
         classifier_sb = foreign_class(
-            source=str(sb_local_path),
+            source=sb_local_path.as_posix(),
             pymodule_file="custom.py",
             classname="CustomEncoderWav2Vec2Classifier",
-            savedir=str(sb_local_path)
+            savedir=sb_local_path.as_posix()
         )
 
         # Initialize the pyannote model directly
         pa_local_path = Path(local_paths[1]).resolve()
         classifier_pa = foreign_class(
-            source=str(pa_local_path),
+            source=pa_local_path.as_posix(),
             pymodule_file="custom.py",
             classname="CustomSpeakerRecognition",
-            savedir=str(pa_local_path)
+            savedir=pa_local_path.as_posix()
         )
     except Exception as e:
         print(f"Error initializing models: {e}")
